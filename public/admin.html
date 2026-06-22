@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Mbogi Angani — Control Room</title>
+<script src="/socket.io/socket.io.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060810;--surface:#0d1117;--card:#111827;--border:#1f2937;--border2:#374151;
+  --red:#EF4444;--orange:#F97316;--green:#4ADE80;--blue:#60A5FA;--purple:#C084FC;--pink:#F472B6;
+  --text:#F9FAFB;--muted:#6B7280;--dim:#374151;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;overflow-x:hidden;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* ─── GATE ─── */
+#gate{position:fixed;inset:0;background:radial-gradient(ellipse at center,#0a0e1a 0%,#060810 70%);display:flex;align-items:center;justify-content:center;z-index:999}
+.gate-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px 32px;width:320px;text-align:center;box-shadow:0 40px 80px rgba(0,0,0,0.8)}
+.gate-icon{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#EF444422,#B91C1C22);border:2px solid #EF444444;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:26px}
+.gate-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:2px;margin-bottom:4px}
+.gate-sub{font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:28px;text-transform:uppercase}
+.gate-input{width:100%;background:#1e293b;border:1.5px solid var(--border2);color:var(--text);border-radius:10px;padding:12px 16px;font-size:18px;font-family:'JetBrains Mono',monospace;font-weight:700;outline:none;text-align:center;letter-spacing:6px;margin-bottom:6px;transition:border-color .2s}
+.gate-input:focus{border-color:var(--red)}
+.gate-input.err{border-color:var(--red);animation:shake .4s ease}
+.gate-btn{width:100%;padding:13px;background:linear-gradient(135deg,var(--red),#B91C1C);border:none;border-radius:10px;color:#fff;font-weight:800;font-size:13px;font-family:'JetBrains Mono',monospace;cursor:pointer;letter-spacing:2px;text-transform:uppercase;box-shadow:0 4px 20px rgba(239,68,68,.35)}
+.gate-err{font-size:10px;color:var(--red);font-weight:700;margin-bottom:10px;animation:fadeIn .2s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+
+/* ─── MAIN LAYOUT ─── */
+#app{display:none;flex-direction:column;min-height:100vh}
+#app.visible{display:flex}
+
+/* ─── TOP BAR ─── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:54px;background:linear-gradient(90deg,#08080f,#0d1117,#08080f);border-bottom:1px solid var(--border);flex-shrink:0}
+.topbar-brand{display:flex;align-items:center;gap:10px}
+.topbar-logo{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;letter-spacing:3px;color:var(--red);text-shadow:0 0 20px rgba(239,68,68,.4)}
+.topbar-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;background:#EF444422;color:var(--red);border:1px solid #EF444444;letter-spacing:1.5px}
+.topbar-right{display:flex;align-items:center;gap:16px}
+.live-dot{display:flex;align-items:center;gap:5px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite}
+.dot.red{background:var(--red);box-shadow:0 0 8px var(--red)}
+.live-label{font-size:9px;font-weight:700;letter-spacing:2px}
+.round-badge{font-size:11px;font-weight:700;color:var(--muted)}
+
+/* ─── GRID ─── */
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:auto auto auto;gap:16px;padding:20px 24px;flex:1}
+@media(max-width:900px){.grid{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.grid{grid-template-columns:1fr;padding:12px}}
+
+/* ─── CARD ─── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;animation:slideUp .4s ease}
+.card-title{font-size:9px;font-weight:700;letter-spacing:2.5px;color:var(--muted);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.card-title::before{content:'';display:inline-block;width:3px;height:12px;border-radius:2px;background:var(--red)}
+
+/* ─── STATUS CARD ─── */
+.status-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat-box{background:#161b22;border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center}
+.stat-label{font-size:8px;color:var(--muted);font-weight:700;letter-spacing:1.5px;margin-bottom:4px}
+.stat-value{font-size:18px;font-weight:800;line-height:1}
+
+/* ─── PHASE DISPLAY ─── */
+.phase-display{text-align:center;padding:16px;background:#161b22;border-radius:10px;border:1px solid var(--border);margin-bottom:14px}
+.phase-label{font-size:9px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-bottom:6px}
+.phase-value{font-size:28px;font-weight:800;font-family:'Syne',sans-serif;letter-spacing:1px}
+.phase-value.betting{color:var(--blue)}
+.phase-value.flying{color:var(--orange);text-shadow:0 0 20px rgba(249,115,22,.5);animation:pulse 0.8s infinite}
+.phase-value.crashed{color:var(--red);text-shadow:0 0 20px rgba(239,68,68,.5)}
+
+/* ─── NEXT CRASH DISPLAY ─── */
+.next-crash-display{background:linear-gradient(135deg,#1a0505,#1f0a0a);border:1px solid #EF444433;border-radius:10px;padding:14px;text-align:center;margin-bottom:14px}
+.next-crash-label{font-size:8px;color:#EF444488;letter-spacing:3px;text-transform:uppercase;margin-bottom:4px}
+.next-crash-value{font-size:36px;font-weight:800;color:var(--red);text-shadow:0 0 24px rgba(239,68,68,.6);line-height:1}
+.next-crash-tag{font-size:8px;color:#EF444455;margin-top:2px;letter-spacing:1px}
+
+/* ─── BUTTONS ─── */
+.btn{width:100%;padding:11px 16px;border:none;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-green{background:linear-gradient(135deg,#16A34A,#15803D);color:#fff;box-shadow:0 4px 12px rgba(22,163,74,.3)}
+.btn-green:hover:not(:disabled){box-shadow:0 4px 20px rgba(22,163,74,.5)}
+.btn-red{background:linear-gradient(135deg,var(--red),#B91C1C);color:#fff;box-shadow:0 4px 12px rgba(239,68,68,.3)}
+.btn-red:hover:not(:disabled){box-shadow:0 4px 20px rgba(239,68,68,.5)}
+.btn-orange{background:linear-gradient(135deg,#D97706,#B45309);color:#fff;box-shadow:0 4px 12px rgba(217,119,6,.3)}
+.btn-ghost{background:#1f2937;border:1px solid var(--border2);color:var(--muted)}
+.btn-ghost:hover:not(:disabled){background:#374151;color:var(--text)}
+.btn-purple{background:linear-gradient(135deg,#9333EA,#7C3AED);color:#fff;box-shadow:0 4px 12px rgba(147,51,234,.3)}
+
+/* ─── INPUT ─── */
+.field{background:#161b22;border:1.5px solid var(--border2);color:var(--text);border-radius:8px;padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;outline:none;width:100%;transition:border-color .2s}
+.field:focus{border-color:var(--orange)}
+.field.err{border-color:var(--red)}
+.field-group{display:flex;gap:8px}
+
+/* ─── QUICK SET CHIPS ─── */
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.chip{padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid transparent;transition:all .15s;font-family:'JetBrains Mono',monospace}
+.chip-blue{background:#1E3A5F;color:var(--blue);border-color:#60A5FA33}
+.chip-blue:hover{background:#1E4A7F;border-color:var(--blue)}
+.chip-purple{background:#3B1F5E;color:var(--purple);border-color:#C084FC33}
+.chip-purple:hover{background:#4B2F7E;border-color:var(--purple)}
+.chip-pink{background:#5E1F3B;color:var(--pink);border-color:#F472B633}
+.chip-pink:hover{background:#7E2F5B;border-color:var(--pink)}
+
+/* ─── SLIDER ─── */
+.slider-track{position:relative;height:6px;background:#1f2937;border-radius:3px;margin:10px 0}
+.slider-fill{position:absolute;left:0;top:0;height:100%;background:linear-gradient(90deg,var(--green),var(--orange),var(--red));border-radius:3px;transition:width .1s}
+input[type=range]{width:100%;appearance:none;-webkit-appearance:none;height:6px;background:transparent;cursor:pointer;position:relative;z-index:1}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#fff;border:2px solid var(--orange);box-shadow:0 0 8px rgba(249,115,22,.5);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:2px solid var(--orange);cursor:pointer}
+
+/* ─── HISTORY ─── */
+.history-bar{display:flex;flex-wrap:wrap;gap:4px;max-height:90px;overflow-y:auto}
+.h-chip{padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;border:1px solid transparent}
+
+/* ─── TOAST ─── */
+.toast{position:fixed;bottom:24px;right:24px;background:#111827;border:1px solid var(--border2);border-radius:10px;padding:12px 18px;font-size:12px;font-weight:700;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,.6);animation:slideUp .3s ease;display:flex;align-items:center;gap:8px;z-index:5000}
+.toast.success{border-color:#16A34A44;color:var(--green)}
+.toast.error{border-color:#EF444444;color:var(--red)}
+.toast.info{border-color:#60A5FA44;color:var(--blue)}
+
+/* ─── CONFIRM BADGE ─── */
+.set-confirm{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--green);font-weight:700;animation:fadeIn .3s ease}
+</style>
+</head>
+<body>
+
+<!-- GATE -->
+<div id="gate">
+  <div class="gate-box">
+    <div class="gate-icon">⚙️</div>
+    <div class="gate-title">CONTROL ROOM</div>
+    <div class="gate-sub">Mbogi Angani Admin</div>
+    <div id="conn-status" style="font-size:9px;margin-bottom:16px;font-weight:700;letter-spacing:1px;color:#EF4444">● CONNECTING...</div>
+    <div id="step-pw">
+      <input class="gate-input" id="pw" type="password" placeholder="Password" autocomplete="off"/>
+      <div class="gate-err" id="pw-err" style="display:none">⚠ Wrong password</div>
+      <button class="gate-btn" id="pw-btn">NEXT →</button>
+    </div>
+    <div id="step-pin" style="display:none">
+      <div style="font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:14px;text-transform:uppercase">Enter 4-digit PIN</div>
+      <input class="gate-input" id="pin" type="password" placeholder="••••" maxlength="4" autocomplete="off"/>
+      <div class="gate-err" id="pin-err" style="display:none">⚠ Wrong PIN</div>
+      <button class="gate-btn" id="pin-btn">ENTER</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-logo">✈ MBOGI ANGANI</div>
+      <div class="topbar-badge">CONTROL ROOM</div>
+    </div>
+    <div class="topbar-right">
+      <div class="live-dot">
+        <div class="dot" id="conn-dot"></div>
+        <span class="live-label" id="conn-label" style="color:var(--green)">CONNECTED</span>
+      </div>
+      <div class="round-badge">ROUND #<span id="round-num">—</span></div>
+      <div class="round-badge"><span id="player-count">0</span> PLAYERS</div>
+    </div>
+  </div>
+
+  <!-- GRID -->
+  <div class="grid">
+
+    <!-- CARD 1: LIVE STATUS -->
+    <div class="card">
+      <div class="card-title">🔴 Live Status</div>
+      <div class="phase-display">
+        <div class="phase-label">Current Phase</div>
+        <div class="phase-value" id="phase-val">—</div>
+      </div>
+      <div class="next-crash-display">
+        <div class="next-crash-label">Next Crash Point</div>
+        <div class="next-crash-value" id="next-crash-val">—</div>
+        <div class="next-crash-tag">ONLY VISIBLE TO YOU</div>
+      </div>
+      <div class="status-grid">
+        <div class="stat-box">
+          <div class="stat-label">Multiplier</div>
+          <div class="stat-value" id="mult-val" style="color:var(--orange)">1.00x</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Countdown</div>
+          <div class="stat-value" id="cd-val" style="color:var(--blue)">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 2: GAME CONTROLS -->
+    <div class="card">
+      <div class="card-title">⚡ Game Controls</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button class="btn btn-green" id="btn-start">▶ &nbsp;Force Start Round</button>
+        <button class="btn btn-red" id="btn-crash">✋ &nbsp;Force Crash Now</button>
+        <div style="height:1px;background:var(--border);margin:4px 0"></div>
+        <div style="font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Set Next Crash Point</div>
+        <div class="field-group">
+          <input class="field" id="crash-input" type="number" placeholder="e.g. 3.50" step="0.01" min="1.01"/>
+          <button class="btn btn-orange" id="btn-set-crash" style="width:auto;padding:10px 16px;flex-shrink:0">SET</button>
+        </div>
+        <div id="set-confirm" style="display:none" class="set-confirm">✓ Crash point set for next round</div>
+        <div class="chips" id="quick-chips">
+          <span class="chip chip-blue" data-v="1.10">1.10x</span>
+          <span class="chip chip-blue" data-v="1.50">1.50x</span>
+          <span class="chip chip-blue" data-v="2.00">2.00x</span>
+          <span class="chip chip-purple" data-v="3.00">3.00x</span>
+          <span class="chip chip-purple" data-v="5.00">5.00x</span>
+          <span class="chip chip-purple" data-v="10.00">10.00x</span>
+          <span class="chip chip-pink" data-v="25.00">25.00x</span>
+          <span class="chip chip-pink" data-v="50.00">50.00x</span>
+          <span class="chip chip-pink" data-v="100.00">100.00x</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 3: HOUSE EDGE -->
+    <div class="card">
+      <div class="card-title">🎲 House Edge</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:11px;color:var(--muted)">Current Edge</span>
+        <span style="font-size:22px;font-weight:800;color:var(--purple)" id="edge-display">35%</span>
+      </div>
+      <div class="slider-track">
+        <div class="slider-fill" id="edge-fill" style="width:35%"></div>
+        <input type="range" id="edge-slider" min="0" max="1" step="0.05" value="0.35" style="position:absolute;top:-5px;left:0;right:0;margin:0"/>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:8px;color:var(--dim);margin-top:6px;margin-bottom:14px">
+        <span>0% (Player friendly)</span><span>100% (House)</span>
+      </div>
+      <div style="background:#161b22;border-radius:8px;padding:10px 12px;border:1px solid var(--border)">
+        <div id="edge-desc" style="font-size:11px;font-weight:700;color:var(--green)">🟢 Player Friendly</div>
+        <div style="font-size:9px;color:var(--muted);margin-top:4px" id="edge-hint">Higher chance of 3x–10x crashes</div>
+      </div>
+      <div style="height:1px;background:var(--border);margin:14px 0"></div>
+      <div style="font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px">Quick Presets</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost" style="font-size:9px;padding:7px" data-edge="0.2">😇 Easy</button>
+        <button class="btn btn-ghost" style="font-size:9px;padding:7px" data-edge="0.4">⚖️ Fair</button>
+        <button class="btn btn-ghost" style="font-size:9px;padding:7px" data-edge="0.65">😈 House</button>
+        <button class="btn btn-ghost" style="font-size:9px;padding:7px" data-edge="0.9">💀 Brutal</button>
+      </div>
+    </div>
+
+    <!-- CARD 4: ROUND HISTORY -->
+    <div class="card">
+      <div class="card-title">📊 Round History</div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <div class="stat-box" style="flex:1">
+          <div class="stat-label">Total Rounds</div>
+          <div class="stat-value" id="hist-total" style="color:var(--blue)">0</div>
+        </div>
+        <div class="stat-box" style="flex:1">
+          <div class="stat-label">Avg Crash</div>
+          <div class="stat-value" id="hist-avg" style="color:var(--green);font-size:14px">—</div>
+        </div>
+        <div class="stat-box" style="flex:1">
+          <div class="stat-label">Bust Rate</div>
+          <div class="stat-value" id="hist-bust" style="color:var(--red);font-size:14px">—%</div>
+        </div>
+      </div>
+      <div class="history-bar" id="history-bar"></div>
+    </div>
+
+    <!-- CARD 5: SEQUENCE PLANNER -->
+    <div class="card">
+      <div class="card-title">📋 Quick Sequence</div>
+      <div style="font-size:9px;color:var(--muted);margin-bottom:10px;line-height:1.6">Set crash points for the <b style="color:var(--text)">next 5 rounds</b> in advance. They apply one by one.</div>
+      <div id="seq-slots" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-purple" id="btn-seq-apply" style="flex:1">⚡ Apply Sequence</button>
+        <button class="btn btn-ghost" id="btn-seq-clear" style="flex:.5;font-size:9px">Clear</button>
+      </div>
+      <div id="seq-status" style="font-size:10px;color:var(--muted);margin-top:8px;min-height:16px"></div>
+    </div>
+
+    <!-- CARD 6: ACTIVITY LOG -->
+    <div class="card">
+      <div class="card-title">📝 Activity Log</div>
+      <div id="log" style="height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
+      <button class="btn btn-ghost" id="btn-clear-log" style="margin-top:10px;font-size:9px;padding:6px">Clear Log</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" style="display:none" class="toast"></div>
+
+<script>
+const PASSWORD = 'Paosiduo'; // must match server.js ADMIN_PASSWORD
+const socket = io();
+socket.on('connect', () => {
+  const el = document.getElementById('conn-status');
+  if(el){ el.textContent = '● CONNECTED'; el.style.color = '#4ADE80'; }
+});
+socket.on('disconnect', () => {
+  const el = document.getElementById('conn-status');
+  if(el){ el.textContent = '● DISCONNECTED — refresh page'; el.style.color = '#EF4444'; }
+});
+
+// ─── GATE ───────────────────────────────────────────
+const gate     = document.getElementById('gate');
+const app      = document.getElementById('app');
+const pwInput  = document.getElementById('pw');
+const pwErr    = document.getElementById('pw-err');
+const pwBtn    = document.getElementById('pw-btn');
+const pinInput = document.getElementById('pin');
+const pinErr   = document.getElementById('pin-err');
+const pinBtn   = document.getElementById('pin-btn');
+
+function tryPassword() {
+  const pw = pwInput.value.trim();
+  pwInput.classList.remove('err');
+  pwErr.style.display = 'none';
+  if (!pw) return;
+  pwBtn.disabled = true;
+  pwBtn.textContent = '...';
+  socket.emit('admin:auth', { password: pw }, (res) => {
+    pwBtn.disabled = false;
+    pwBtn.textContent = 'NEXT →';
+    if (res && res.ok) {
+      document.getElementById('step-pw').style.display = 'none';
+      document.getElementById('step-pin').style.display = 'block';
+      setTimeout(() => pinInput.focus(), 50);
+    } else {
+      pwInput.classList.add('err');
+      pwErr.textContent = (res && res.msg) || '⚠ Wrong password';
+      pwErr.style.display = 'block';
+      pwInput.value = '';
+      setTimeout(() => { pwInput.classList.remove('err'); }, 600);
+    }
+  });
+  // Timeout fallback — if server doesn't respond in 5s
+  setTimeout(() => {
+    if (pwBtn.disabled) {
+      pwBtn.disabled = false;
+      pwBtn.textContent = 'NEXT →';
+      pwErr.textContent = '⚠ Server not responding. Check connection.';
+      pwErr.style.display = 'block';
+    }
+  }, 5000);
+}
+
+function tryPin() {
+  const pin = pinInput.value.trim();
+  pinInput.classList.remove('err');
+  pinErr.style.display = 'none';
+  if (!pin) return;
+  pinBtn.disabled = true;
+  pinBtn.textContent = '...';
+  socket.emit('admin:authPin', { pin }, (res) => {
+    pinBtn.disabled = false;
+    pinBtn.textContent = 'ENTER';
+    if (res && res.ok) {
+      gate.style.display = 'none';
+      app.classList.add('visible');
+    } else {
+      pinInput.classList.add('err');
+      pinErr.textContent = (res && res.msg) || '⚠ Wrong PIN';
+      pinErr.style.display = 'block';
+      pinInput.value = '';
+      setTimeout(() => { pinInput.classList.remove('err'); }, 600);
+    }
+  });
+  setTimeout(() => {
+    if (pinBtn.disabled) {
+      pinBtn.disabled = false;
+      pinBtn.textContent = 'ENTER';
+      pinErr.textContent = '⚠ Server not responding.';
+      pinErr.style.display = 'block';
+    }
+  }, 5000);
+}
+
+pwBtn.addEventListener('click', tryPassword);
+pwInput.addEventListener('keydown', e => e.key === 'Enter' && tryPassword());
+pinBtn.addEventListener('click', tryPin);
+pinInput.addEventListener('keydown', e => e.key === 'Enter' && tryPin());
+
+// ─── STATE ──────────────────────────────────────────
+let currentState = {};
+let seqQueue = ['', '', '', '', ''];
+
+// ─── SOCKET EVENTS ──────────────────────────────────
+socket.on('connect',    () => setConn(true));
+socket.on('disconnect', () => setConn(false));
+
+socket.on('state', data => {
+  currentState = data;
+  updateUI(data);
+});
+
+socket.on('admin:state', data => {
+  currentState = data;
+  updateUI(data);
+});
+
+function setConn(ok) {
+  const dot   = document.getElementById('conn-dot');
+  const label = document.getElementById('conn-label');
+  if (ok) { dot.classList.remove('red'); label.style.color = 'var(--green)'; label.textContent = 'CONNECTED'; }
+  else     { dot.classList.add('red');   label.style.color = 'var(--red)';   label.textContent = 'DISCONNECTED'; }
+}
+
+// ─── UI UPDATE ──────────────────────────────────────
+function mColor(m){ return m < 2 ? '#60A5FA' : m < 10 ? '#C084FC' : '#F472B6'; }
+function mBg(m)   { return m < 2 ? '#1E3A5F' : m < 10 ? '#3B1F5E' : '#5E1F3B'; }
+
+function updateUI(data) {
+  // Phase
+  const pv = document.getElementById('phase-val');
+  pv.textContent = data.phase.toUpperCase();
+  pv.className = 'phase-value ' + data.phase;
+
+  // Next crash
+  const nc = document.getElementById('next-crash-val');
+  nc.textContent = data.crashPoint ? data.crashPoint.toFixed(2) + 'x' : '—';
+
+  // Stats
+  document.getElementById('mult-val').textContent  = (data.multiplier || 1).toFixed(2) + 'x';
+  document.getElementById('cd-val').textContent    = data.phase === 'betting' ? (data.countdown || 0).toFixed(1) + 's' : '—';
+  document.getElementById('round-num').textContent = data.roundNum || '—';
+  document.getElementById('player-count').textContent = data.connectedPlayers || 0;
+
+  // House edge
+  const edge = data.houseEdge || 0.35;
+  document.getElementById('edge-display').textContent = Math.round(edge * 100) + '%';
+  document.getElementById('edge-fill').style.width = (edge * 100) + '%';
+  document.getElementById('edge-slider').value = edge;
+  updateEdgeDesc(edge);
+
+  // History
+  updateHistory(data.history || []);
+
+  // Button states
+  document.getElementById('btn-start').disabled  = data.phase !== 'betting';
+  document.getElementById('btn-crash').disabled  = data.phase !== 'flying';
+}
+
+function updateEdgeDesc(e) {
+  const desc = document.getElementById('edge-desc');
+  const hint = document.getElementById('edge-hint');
+  if (e <= 0.25) { desc.textContent = '🟢 Player Friendly'; desc.style.color = 'var(--green)'; hint.textContent = 'Higher chance of 3x–10x crashes'; }
+  else if (e <= 0.55) { desc.textContent = '⚖️ Balanced'; desc.style.color = 'var(--orange)'; hint.textContent = 'Standard distribution'; }
+  else if (e <= 0.8) { desc.textContent = '🔴 House Edge'; desc.style.color = 'var(--red)'; hint.textContent = 'More 1x–2x early crashes'; }
+  else { desc.textContent = '💀 Brutal'; desc.style.color = '#F472B6'; hint.textContent = 'Majority of rounds bust early'; }
+}
+
+function updateHistory(history) {
+  const bar   = document.getElementById('history-bar');
+  const total = document.getElementById('hist-total');
+  const avg   = document.getElementById('hist-avg');
+  const bust  = document.getElementById('hist-bust');
+  total.textContent = history.length;
+  if (history.length > 0) {
+    const a = (history.reduce((a, b) => a + b, 0) / history.length).toFixed(2);
+    const b = ((history.filter(h => h < 2).length / history.length) * 100).toFixed(0);
+    avg.textContent = a + 'x';
+    bust.textContent = b + '%';
+  }
+  bar.innerHTML = [...history].reverse().slice(0, 30).map(h => `
+    <span class="h-chip" style="background:${mBg(h)};color:${mColor(h)};border-color:${mColor(h)}33">
+      ${h.toFixed(2)}x
+    </span>
+  `).join('');
+}
+
+// ─── CONTROLS ──────────────────────────────────────
+document.getElementById('btn-start').addEventListener('click', () => {
+  socket.emit('admin:forceStart');
+  log('▶ Force start sent', 'green');
+  toast('Round started!', 'success');
+});
+
+document.getElementById('btn-crash').addEventListener('click', () => {
+  socket.emit('admin:forceCrash');
+  log('✋ Force crash sent', 'red');
+  toast('Crash forced!', 'error');
+});
+
+document.getElementById('btn-set-crash').addEventListener('click', () => {
+  const v = parseFloat(document.getElementById('crash-input').value);
+  if (isNaN(v) || v < 1.01) { document.getElementById('crash-input').classList.add('err'); return; }
+  document.getElementById('crash-input').classList.remove('err');
+  socket.emit('admin:setOverride', { value: v });
+  log(`🎯 Crash override set → ${v.toFixed(2)}x`, 'orange');
+  toast(`Next crash set to ${v.toFixed(2)}x`, 'info');
+  const confirm = document.getElementById('set-confirm');
+  confirm.style.display = 'flex';
+  setTimeout(() => { confirm.style.display = 'none'; }, 3000);
+});
+
+document.getElementById('crash-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('btn-set-crash').click();
+});
+
+// Quick chips
+document.getElementById('quick-chips').addEventListener('click', e => {
+  const chip = e.target.closest('[data-v]');
+  if (!chip) return;
+  const v = parseFloat(chip.dataset.v);
+  socket.emit('admin:setOverride', { value: v });
+  log(`🎯 Quick set → ${v.toFixed(2)}x`, 'orange');
+  toast(`Next crash set to ${v.toFixed(2)}x`, 'info');
+  const confirm = document.getElementById('set-confirm');
+  confirm.style.display = 'flex';
+  confirm.textContent = `✓ Set to ${v.toFixed(2)}x`;
+  setTimeout(() => { confirm.style.display = 'none'; }, 3000);
+});
+
+// House edge slider
+document.getElementById('edge-slider').addEventListener('input', e => {
+  const v = parseFloat(e.target.value);
+  socket.emit('admin:setEdge', { value: v });
+  document.getElementById('edge-fill').style.width = (v * 100) + '%';
+  document.getElementById('edge-display').textContent = Math.round(v * 100) + '%';
+  updateEdgeDesc(v);
+});
+
+// Edge presets
+document.querySelectorAll('[data-edge]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const v = parseFloat(btn.dataset.edge);
+    socket.emit('admin:setEdge', { value: v });
+    document.getElementById('edge-slider').value = v;
+    document.getElementById('edge-fill').style.width = (v * 100) + '%';
+    document.getElementById('edge-display').textContent = Math.round(v * 100) + '%';
+    updateEdgeDesc(v);
+    log(`🎲 House edge → ${Math.round(v * 100)}%`, 'purple');
+    toast(`Edge set to ${Math.round(v * 100)}%`, 'info');
+  });
+});
+
+// ─── SEQUENCE PLANNER ─────────────────────────────
+const seqSlots = document.getElementById('seq-slots');
+function buildSeqSlots() {
+  seqSlots.innerHTML = seqQueue.map((v, i) => `
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:9px;color:var(--muted);width:60px;flex-shrink:0">ROUND +${i+1}</span>
+      <input class="field" data-seq="${i}" type="number" placeholder="e.g. 2.00" step="0.01" min="1.01" value="${v}" style="font-size:12px;padding:7px 10px"/>
+    </div>
+  `).join('');
+  seqSlots.querySelectorAll('[data-seq]').forEach(inp => {
+    inp.addEventListener('input', e => { seqQueue[parseInt(e.target.dataset.seq)] = e.target.value; });
+  });
+}
+buildSeqSlots();
+
+let seqIndex = 0;
+document.getElementById('btn-seq-apply').addEventListener('click', () => {
+  const valid = seqQueue.map(v => parseFloat(v)).filter(v => !isNaN(v) && v >= 1.01);
+  if (valid.length === 0) { toast('Enter at least one value', 'error'); return; }
+  // Send entire sequence to server — it dequeues one per round automatically
+  socket.emit('admin:setSequence', { values: valid });
+  document.getElementById('seq-status').textContent = `🎯 ${valid.length} rounds queued on server`;
+  log(`📋 Sequence of ${valid.length} sent: ${valid.map(v=>v.toFixed(2)+'x').join(', ')}`, 'purple');
+  toast(`Sequence of ${valid.length} queued!`, 'success');
+});
+
+document.getElementById('btn-seq-clear').addEventListener('click', () => {
+  seqQueue = ['', '', '', '', ''];
+  socket.emit('admin:setSequence', { values: [] });
+  buildSeqSlots();
+  document.getElementById('seq-status').textContent = '';
+  toast('Sequence cleared', 'info');
+});
+
+// Show server-side queue status in seq-status when admin:state arrives
+socket.on('admin:state', data => {
+  if (data.seqQueue && data.seqQueue.length > 0) {
+    document.getElementById('seq-status').textContent = `⏳ ${data.seqQueue.length} round(s) remaining in queue`;
+  } else if (document.getElementById('seq-status').textContent.startsWith('⏳')) {
+    document.getElementById('seq-status').textContent = '✓ Sequence complete';
+  }
+});
+
+// ─── LOG ───────────────────────────────────────────
+const logEl = document.getElementById('log');
+function log(msg, color = 'muted') {
+  const colorMap = { green: '#4ADE80', red: '#EF4444', orange: '#F97316', blue: '#60A5FA', purple: '#C084FC', muted: '#6B7280' };
+  const now = new Date().toLocaleTimeString();
+  const el = document.createElement('div');
+  el.style.cssText = `font-size:10px;color:${colorMap[color]};display:flex;gap:8px;animation:fadeIn .2s ease`;
+  el.innerHTML = `<span style="color:var(--dim);flex-shrink:0">${now}</span><span>${msg}</span>`;
+  logEl.prepend(el);
+  if (logEl.children.length > 50) logEl.lastChild.remove();
+}
+
+// Auto-log phase changes
+let lastPhase = '';
+socket.on('state', data => {
+  if (data.phase !== lastPhase) {
+    const colors = { betting: 'blue', flying: 'orange', crashed: 'red' };
+    log(`Phase → ${data.phase.toUpperCase()}${data.phase === 'crashed' ? ` @ ${(data.multiplier||1).toFixed(2)}x` : ''}`, colors[data.phase]);
+    lastPhase = data.phase;
+  }
+});
+
+document.getElementById('btn-clear-log').addEventListener('click', () => { logEl.innerHTML = ''; });
+
+// ─── TOAST ─────────────────────────────────────────
+let toastTimer;
+function toast(msg, type = 'info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${type}`;
+  el.style.display = 'flex';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.style.display = 'none'; }, 2500);
+}
+</script>
+</body>
+</html>
