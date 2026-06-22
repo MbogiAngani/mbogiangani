@@ -1177,6 +1177,16 @@ function BetPanel({
     if (prev === BETTING && gameState === FLYING && status === 'placed') setStatus('active');
     if (gameState === CRASHED) {
       if (status === 'active') {
+        fetch('/api/limits/record-loss', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            phone: '',
+            amount: locked
+          })
+        }).catch(() => {});
         setStatus('lost');
         setTimeout(() => setStatus('idle'), 2500);
       }
@@ -2378,6 +2388,8 @@ function Game({
   const [winCelebration, setWinCelebration] = useState(null);
   const [connected, setConnected] = useState(false);
   const [muted, setMuted] = useState(false);
+  const [serverHash, setServerHash] = useState('');
+  const [lastSeed, setLastSeed] = useState(null);
   const [gs, setGs] = useState(BETTING);
   const [mult, setMult] = useState(1.00);
   const [history, setHistory] = useState([2.14, 1.43, 8.72, 1.07, 45.3, 3.21, 1.88, 2.66, 1.15, 12.4]);
@@ -2397,6 +2409,11 @@ function Game({
   const engineTickRef = useRef(null);
   useEffect(() => {
     socket.on('connect', () => setConnected(true));
+    socket.on('seed:reveal', data => setLastSeed({
+      seed: data.serverSeed,
+      hash: data.serverHash,
+      crashPoint: data.crashPoint
+    }));
     socket.on('disconnect', () => setConnected(false));
     socket.on('state', data => {
       const prev = prevGsRef.current;
@@ -2438,11 +2455,13 @@ function Game({
       setMult(data.multiplier);
       setHistory(data.history);
       setCd(data.countdown);
+      if (data.serverHash) setServerHash(data.serverHash);
     });
     return () => {
       socket.off('connect');
       socket.off('disconnect');
       socket.off('state');
+      socket.off('seed:reveal');
       if (engineTickRef.current) clearInterval(engineTickRef.current);
     };
   }, []);
@@ -2467,6 +2486,18 @@ function Game({
     amount: winCelebration.amount,
     multiplier: winCelebration.multiplier,
     onDone: () => setWinCelebration(null)
+  }), /*#__PURE__*/React.createElement(InstallBanner, null), /*#__PURE__*/React.createElement(ChatPanel, {
+    user: user,
+    socket: socket,
+    gameState: gs,
+    multiplier: mult
+  }), /*#__PURE__*/React.createElement(ProvenFair, {
+    serverHash: serverHash,
+    lastSeed: lastSeed
+  }), /*#__PURE__*/React.createElement(ReferralWidget, {
+    user: user
+  }), /*#__PURE__*/React.createElement(RGWidget, {
+    user: user
   }), showDeposit && /*#__PURE__*/React.createElement(DepositModal, {
     balance: balance,
     setBalance: setBalance,
@@ -2622,6 +2653,21 @@ function Game({
   }, "+254 738 425 134")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
+      justifyContent: 'center',
+      gap: 8,
+      paddingBottom: 6,
+      flexWrap: 'wrap'
+    }
+  }, /*#__PURE__*/React.createElement(ProvenFair, {
+    serverHash: serverHash,
+    lastSeed: lastSeed
+  }), /*#__PURE__*/React.createElement(ReferralWidget, {
+    user: user
+  }), /*#__PURE__*/React.createElement(RGWidget, {
+    user: user
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
       gap: 8,
       paddingBottom: 8
     }
@@ -2768,7 +2814,7 @@ function App() {
       width: '100%',
       position: 'relative'
     }
-  }, authModal && /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(InstallBanner, null), authModal && /*#__PURE__*/React.createElement("div", {
     onClick: () => setAuthModal(null),
     style: {
       position: 'fixed',
@@ -2975,6 +3021,17 @@ function App() {
     multiplier: bgMult
   })));
 }
+
+/* ── PWA: Service Worker + Install Prompt ── */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
+let _deferredInstall = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _deferredInstall = e;
+  window.__pwaReady = true;
+  // Notify React
+  window.dispatchEvent(new Event('pwa-ready'));
+});
 ReactDOM.createRoot(document.getElementById('root')).render(/*#__PURE__*/React.createElement(App, null));
-window.MA_CONFIG={dailyDeposit:2000,dailyLoss:2000};
-window.addEventListener('load',()=>{const b=document.createElement('div');b.id='botFeed';b.style='position:fixed;right:10px;top:80px;width:220px;height:300px;background:#111;overflow:auto;z-index:9999;padding:8px;border-radius:12px';document.body.appendChild(b);const msgs=['wueh leo ni moto','toa mapema bro','eh mzee imeenda','cash out sasa','noma sana','weh usikawie'];setInterval(()=>{b.innerHTML+='<div style="margin:4px 0">🤖 '+msgs[Math.floor(Math.random()*msgs.length)]+'</div>';b.scrollTop=b.scrollHeight;},7000);});
