@@ -137,7 +137,6 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
     <div class="gate-icon">⚙️</div>
     <div class="gate-title">CONTROL ROOM</div>
     <div class="gate-sub">Mbogi Angani Admin</div>
-    <div id="conn-status" style="font-size:9px;margin-bottom:16px;font-weight:700;letter-spacing:1px;color:#EF4444">● CONNECTING...</div>
     <div id="step-pw">
       <input class="gate-input" id="pw" type="password" placeholder="Password" autocomplete="off"/>
       <div class="gate-err" id="pw-err" style="display:none">⚠ Wrong password</div>
@@ -301,14 +300,6 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 <script>
 const PASSWORD = 'Paosiduo'; // must match server.js ADMIN_PASSWORD
 const socket = io();
-socket.on('connect', () => {
-  const el = document.getElementById('conn-status');
-  if(el){ el.textContent = '● CONNECTED'; el.style.color = '#4ADE80'; }
-});
-socket.on('disconnect', () => {
-  const el = document.getElementById('conn-status');
-  if(el){ el.textContent = '● DISCONNECTED — refresh page'; el.style.color = '#EF4444'; }
-});
 
 // ─── GATE ───────────────────────────────────────────
 const gate     = document.getElementById('gate');
@@ -325,32 +316,18 @@ function tryPassword() {
   pwInput.classList.remove('err');
   pwErr.style.display = 'none';
   if (!pw) return;
-  pwBtn.disabled = true;
-  pwBtn.textContent = '...';
   socket.emit('admin:auth', { password: pw }, (res) => {
-    pwBtn.disabled = false;
-    pwBtn.textContent = 'NEXT →';
-    if (res && res.ok) {
+    if (res.ok) {
       document.getElementById('step-pw').style.display = 'none';
       document.getElementById('step-pin').style.display = 'block';
       setTimeout(() => pinInput.focus(), 50);
     } else {
       pwInput.classList.add('err');
-      pwErr.textContent = (res && res.msg) || '⚠ Wrong password';
       pwErr.style.display = 'block';
       pwInput.value = '';
-      setTimeout(() => { pwInput.classList.remove('err'); }, 600);
+      setTimeout(() => pwInput.classList.remove('err'), 500);
     }
   });
-  // Timeout fallback — if server doesn't respond in 5s
-  setTimeout(() => {
-    if (pwBtn.disabled) {
-      pwBtn.disabled = false;
-      pwBtn.textContent = 'NEXT →';
-      pwErr.textContent = '⚠ Server not responding. Check connection.';
-      pwErr.style.display = 'block';
-    }
-  }, 5000);
 }
 
 function tryPin() {
@@ -358,30 +335,17 @@ function tryPin() {
   pinInput.classList.remove('err');
   pinErr.style.display = 'none';
   if (!pin) return;
-  pinBtn.disabled = true;
-  pinBtn.textContent = '...';
   socket.emit('admin:authPin', { pin }, (res) => {
-    pinBtn.disabled = false;
-    pinBtn.textContent = 'ENTER';
-    if (res && res.ok) {
+    if (res.ok) {
       gate.style.display = 'none';
       app.classList.add('visible');
     } else {
       pinInput.classList.add('err');
-      pinErr.textContent = (res && res.msg) || '⚠ Wrong PIN';
       pinErr.style.display = 'block';
       pinInput.value = '';
-      setTimeout(() => { pinInput.classList.remove('err'); }, 600);
+      setTimeout(() => pinInput.classList.remove('err'), 500);
     }
   });
-  setTimeout(() => {
-    if (pinBtn.disabled) {
-      pinBtn.disabled = false;
-      pinBtn.textContent = 'ENTER';
-      pinErr.textContent = '⚠ Server not responding.';
-      pinErr.style.display = 'block';
-    }
-  }, 5000);
 }
 
 pwBtn.addEventListener('click', tryPassword);

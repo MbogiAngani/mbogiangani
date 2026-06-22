@@ -1177,16 +1177,6 @@ function BetPanel({
     if (prev === BETTING && gameState === FLYING && status === 'placed') setStatus('active');
     if (gameState === CRASHED) {
       if (status === 'active') {
-        fetch('/api/limits/record-loss', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            phone: '',
-            amount: locked
-          })
-        }).catch(() => {});
         setStatus('lost');
         setTimeout(() => setStatus('idle'), 2500);
       }
@@ -2388,8 +2378,6 @@ function Game({
   const [winCelebration, setWinCelebration] = useState(null);
   const [connected, setConnected] = useState(false);
   const [muted, setMuted] = useState(false);
-  const [serverHash, setServerHash] = useState('');
-  const [lastSeed, setLastSeed] = useState(null);
   const [gs, setGs] = useState(BETTING);
   const [mult, setMult] = useState(1.00);
   const [history, setHistory] = useState([2.14, 1.43, 8.72, 1.07, 45.3, 3.21, 1.88, 2.66, 1.15, 12.4]);
@@ -2409,11 +2397,6 @@ function Game({
   const engineTickRef = useRef(null);
   useEffect(() => {
     socket.on('connect', () => setConnected(true));
-    socket.on('seed:reveal', data => setLastSeed({
-      seed: data.serverSeed,
-      hash: data.serverHash,
-      crashPoint: data.crashPoint
-    }));
     socket.on('disconnect', () => setConnected(false));
     socket.on('state', data => {
       const prev = prevGsRef.current;
@@ -2455,13 +2438,11 @@ function Game({
       setMult(data.multiplier);
       setHistory(data.history);
       setCd(data.countdown);
-      if (data.serverHash) setServerHash(data.serverHash);
     });
     return () => {
       socket.off('connect');
       socket.off('disconnect');
       socket.off('state');
-      socket.off('seed:reveal');
       if (engineTickRef.current) clearInterval(engineTickRef.current);
     };
   }, []);
@@ -2486,18 +2467,6 @@ function Game({
     amount: winCelebration.amount,
     multiplier: winCelebration.multiplier,
     onDone: () => setWinCelebration(null)
-  }), /*#__PURE__*/React.createElement(ChatPanel, {
-    user: user,
-    socket: socket,
-    gameState: gs,
-    multiplier: mult
-  }), /*#__PURE__*/React.createElement(ProvenFair, {
-    serverHash: serverHash,
-    lastSeed: lastSeed
-  }), /*#__PURE__*/React.createElement(ReferralWidget, {
-    user: user
-  }), /*#__PURE__*/React.createElement(RGWidget, {
-    user: user
   }), showDeposit && /*#__PURE__*/React.createElement(DepositModal, {
     balance: balance,
     setBalance: setBalance,
@@ -2651,21 +2620,6 @@ function Game({
       fontWeight: 700
     }
   }, "+254 738 425 134")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      justifyContent: 'center',
-      gap: 8,
-      paddingBottom: 6,
-      flexWrap: 'wrap'
-    }
-  }, /*#__PURE__*/React.createElement(ProvenFair, {
-    serverHash: serverHash,
-    lastSeed: lastSeed
-  }), /*#__PURE__*/React.createElement(ReferralWidget, {
-    user: user
-  }), /*#__PURE__*/React.createElement(RGWidget, {
-    user: user
-  })), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       gap: 8,

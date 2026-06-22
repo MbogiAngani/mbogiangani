@@ -1,5 +1,4 @@
 const express = require('express');
-const crypto  = require('crypto');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
@@ -11,14 +10,6 @@ const io = new Server(server, {
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Secret admin URL alias — /control is a hidden path
-// ⚠ SECRET ADMIN URL — do not share this path
-app.get('/control-room-mbo254', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
-// Block direct access to admin.html
-app.get('/admin.html', (req, res) => res.status(404).send('Not found'));
 
 // ════════════════════════════════════════════════════
 //  GAME STATE
@@ -40,50 +31,13 @@ let state = {
   history:    [2.14, 1.43, 8.72, 1.07, 45.3, 3.21, 1.88, 2.66, 1.15, 12.4],
   startedAt:  null,
   adminOverride: null,   // next forced crash value
-  serverSeed:    crypto.randomBytes(16).toString('hex'),
-  serverHash:    '',   // SHA256(serverSeed) — shown to players before round
-  clientSeed:    '',   // future: player-contributed seed
   seqQueue:   [],        // sequence of crash points to apply round by round
   connectedPlayers: 0,
 };
 
 // ════════════════════════════════════════════════════
-//  CHAT STORE (last 60 messages)
-// ════════════════════════════════════════════════════
-const chat = [];
-const MAX_CHAT = 60;
-function addChat(username, text, type='msg'){
-  const msg = { id: Date.now()+Math.random(), username, text, type, ts: Date.now() };
-  chat.push(msg);
-  if(chat.length > MAX_CHAT) chat.shift();
-  io.emit('chat', msg);
-}
-
-// ════════════════════════════════════════════════════
-//  REFERRAL STORE  { code -> { owner, used:[] } }
-// ════════════════════════════════════════════════════
-const referrals = {};
-
-// ════════════════════════════════════════════════════
-//  USER LIMITS  { phone -> { dailyDeposit, dailyLoss, lossLimit, depositLimit, date } }
-// ════════════════════════════════════════════════════
-const userLimits = {};
-function getLimits(phone){
-  const today = new Date().toDateString();
-  if(!userLimits[phone] || userLimits[phone].date !== today){
-    userLimits[phone] = { dailyDeposit:0, dailyLoss:0, depositLimit:2000, lossLimit:2000, date:today };
-  }
-  return userLimits[phone];
-}
-
-// ════════════════════════════════════════════════════
 //  CRASH POINT GENERATOR
 // ════════════════════════════════════════════════════
-function newSeed(){
-  state.serverSeed = crypto.randomBytes(16).toString('hex');
-  state.serverHash = crypto.createHash('sha256').update(state.serverSeed).digest('hex');
-}
-
 function genCrash(houseEdge = 0.35) {
   // Sequence queue takes first priority
   if (state.seqQueue.length > 0) {
@@ -133,7 +87,6 @@ function broadcast() {
     houseEdge:  state.houseEdge,
     history:    state.history,
     connectedPlayers: state.connectedPlayers,
-    serverHash: state.serverHash,
   });
 }
 
@@ -144,7 +97,6 @@ function stopAll() {
 
 function startBetting() {
   stopAll();
-  newSeed();  // generate new seed & hash for this round
   state.phase      = BETTING;
   state.multiplier = 1.00;
   state.crashPoint = genCrash(state.houseEdge);
@@ -194,12 +146,9 @@ function startFlying() {
 
 function doCrash() {
   stopAll();
-  // Reveal the server seed so players can verify: SHA256(serverSeed) == serverHash shown before round
-  const revealedSeed = state.serverSeed;
   state.phase      = CRASHED;
   state.multiplier = state.crashPoint;
   state.history    = [...state.history.slice(-29), state.crashPoint];
-  io.emit('seed:reveal', { serverSeed: revealedSeed, serverHash: state.serverHash, crashPoint: state.crashPoint });
   broadcast();
   setTimeout(startBetting, 3200);
 }
@@ -219,31 +168,30 @@ io.on('connection', (socket) => {
     roundNum:    state.roundNum,
     countdown:   state.countdown,
     houseEdge:   state.houseEdge,
-    history:    state.history,
+    history:     state.history,
     connectedPlayers: state.connectedPlayers,
-    serverHash: state.serverHash,
   });
 
-  // ── ADMIN AUTH — single step (password + PIN combined) ──
+  // ── ADMIN AUTH — step 1: password ──
   socket.on('admin:auth', ({ password }, cb) => {
-    if (typeof cb !== 'function') return;
     if (password === ADMIN_PASSWORD) {
-      socket.data.pwOk = true;
+      socket.data = socket.data || {};
+      socket.data.pwOk = true;  // password verified, awaiting PIN
       cb({ ok: true });
     } else {
-      cb({ ok: false, msg: 'Wrong password' });
+      cb({ ok: false });
     }
   });
 
+  // ── ADMIN AUTH — step 2: PIN ──
   socket.on('admin:authPin', ({ pin }, cb) => {
-    if (typeof cb !== 'function') return;
-    if (socket.data.pwOk && String(pin).trim() === String(ADMIN_PIN)) {
+    if (socket.data && socket.data.pwOk && String(pin) === String(ADMIN_PIN)) {
       socket.data.pwOk = false;
       socket.join('admins');
       cb({ ok: true });
       socket.emit('admin:state', buildAdminState());
     } else {
-      cb({ ok: false, msg: socket.data.pwOk ? 'Wrong PIN' : 'Authenticate first' });
+      cb({ ok: false });
     }
   });
 
@@ -336,13 +284,6 @@ io.on('connection', (socket) => {
     io.to('admins').emit('admin:state', buildAdminState());
   });
 
-  socket.on('chat:msg', ({ username, text }) => {
-    if(!username || !text) return;
-    const clean = String(text).slice(0,120).trim();
-    if(!clean) return;
-    addChat(username, clean);
-  });
-
   socket.on('disconnect', () => {
     state.connectedPlayers = io.engine.clientsCount;
     broadcast();
@@ -372,66 +313,6 @@ function buildAdminState() {
     stats: { avg, bustPct },
   };
 }
-
-// ════════════════════════════════════════════════════
-//  REST — CHAT HISTORY, REFERRAL, LIMITS
-// ════════════════════════════════════════════════════
-app.use(express.json());
-
-app.get('/api/chat', (req, res) => res.json({ ok:true, messages: chat.slice(-30) }));
-
-app.post('/api/referral/create', (req, res) => {
-  const { phone } = req.body || {};
-  if(!phone) return res.json({ ok:false, msg:'No phone' });
-  // Generate or return existing code
-  let code = Object.keys(referrals).find(k => referrals[k].owner === phone);
-  if(!code){
-    code = phone.slice(-4) + Math.random().toString(36).slice(2,6).toUpperCase();
-    referrals[code] = { owner: phone, used: [], bonus: 20 };
-  }
-  return res.json({ ok:true, code, link: `${req.protocol}://${req.get('host')}?ref=${code}` });
-});
-
-app.post('/api/referral/use', (req, res) => {
-  const { code, newPhone } = req.body || {};
-  const ref = referrals[code];
-  if(!ref) return res.json({ ok:false, msg:'Invalid referral code' });
-  if(ref.owner === newPhone) return res.json({ ok:false, msg:'Cannot use own referral' });
-  if(ref.used.includes(newPhone)) return res.json({ ok:false, msg:'Already used' });
-  ref.used.push(newPhone);
-  return res.json({ ok:true, bonus: ref.bonus, ownerPhone: ref.owner });
-});
-
-app.get('/api/limits/:phone', (req, res) => {
-  const lim = getLimits(req.params.phone);
-  res.json({ ok:true, ...lim });
-});
-
-app.post('/api/limits/set', (req, res) => {
-  const { phone, depositLimit, lossLimit } = req.body || {};
-  if(!phone) return res.json({ ok:false });
-  const lim = getLimits(phone);
-  if(depositLimit !== undefined) lim.depositLimit = Math.max(500, Math.min(500000, parseInt(depositLimit)));
-  if(lossLimit !== undefined)    lim.lossLimit    = Math.max(500, Math.min(500000, parseInt(lossLimit)));
-  res.json({ ok:true, ...lim });
-});
-
-app.post('/api/limits/record-deposit', (req, res) => {
-  const { phone, amount } = req.body || {};
-  const lim = getLimits(phone);
-  lim.dailyDeposit += parseInt(amount)||0;
-  res.json({ ok:true, ...lim });
-});
-
-app.post('/api/limits/record-loss', (req, res) => {
-  const { phone, amount } = req.body || {};
-  const lim = getLimits(phone);
-  lim.dailyLoss += parseInt(amount)||0;
-  const blocked = lim.dailyLoss >= lim.lossLimit;
-  res.json({ ok:true, blocked, ...lim });
-});
-
-
 
 // ════════════════════════════════════════════════════
 //  KICK OFF
