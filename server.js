@@ -9,7 +9,10 @@ const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] }
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json());
+app.use(express.static(path.join(__dirname,'public'));
+const DAILY_LIMIT_KES=2000;
+const referrals={};
 
 // ════════════════════════════════════════════════════
 //  GAME STATE
@@ -324,3 +327,7 @@ server.listen(PORT, () => {
   console.log(`   Admin: http://localhost:${PORT}/admin.html\n`);
   startBetting();
 });
+
+app.get('/api/referral/:user',(req,res)=>res.json({link:req.protocol+'://'+req.get('host')+'/?ref='+req.params.user}));
+app.post('/api/referral/use',(req,res)=>res.json({ok:true,credit:20}));
+io.use((socket,next)=>{socket.safeCb=(cb,...args)=>typeof cb==='function'&&cb(...args);next();});

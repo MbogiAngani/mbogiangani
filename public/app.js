@@ -2976,3 +2976,5 @@ function App() {
   })));
 }
 ReactDOM.createRoot(document.getElementById('root')).render(/*#__PURE__*/React.createElement(App, null));
+window.MA_CONFIG={dailyDeposit:2000,dailyLoss:2000};
+window.addEventListener('load',()=>{const b=document.createElement('div');b.id='botFeed';b.style='position:fixed;right:10px;top:80px;width:220px;height:300px;background:#111;overflow:auto;z-index:9999;padding:8px;border-radius:12px';document.body.appendChild(b);const msgs=['wueh leo ni moto','toa mapema bro','eh mzee imeenda','cash out sasa','noma sana','weh usikawie'];setInterval(()=>{b.innerHTML+='<div style="margin:4px 0">🤖 '+msgs[Math.floor(Math.random()*msgs.length)]+'</div>';b.scrollTop=b.scrollHeight;},7000);});
