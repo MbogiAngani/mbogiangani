@@ -17,7 +17,7 @@ html,body{height:100%;background:#0d0d1a;color:#fff;font-family:'Segoe UI',syste
 
 /* ── Animations ── */
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 @keyframes slideIn{from{transform:translateX(-20px);opacity:0}to{transform:translateX(0);opacity:1}}
 @keyframes glow{0%,100%{text-shadow:0 0 20px rgba(239,68,68,0.5)}50%{text-shadow:0 0 50px rgba(239,68,68,1),0 0 80px rgba(249,115,22,0.5)}}
 @keyframes winPop{0%{transform:translate(-50%,-50%) scale(0.3);opacity:0}40%{transform:translate(-50%,-50%) scale(1.15);opacity:1}70%{transform:translate(-50%,-50%) scale(0.95)}100%{transform:translate(-50%,-50%) scale(1);opacity:1}}
@@ -27,28 +27,27 @@ html,body{height:100%;background:#0d0d1a;color:#fff;font-family:'Segoe UI',syste
 @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
 @keyframes cashoutFloat{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-50px) scale(1.4)}}
 
-/* ── Scrollbars ── */
+/* ── Scrollbar ── */
 ::-webkit-scrollbar{width:3px}
 ::-webkit-scrollbar-track{background:#0d0d1a}
-::-webkit-scrollbar-thumb{background:#2d2d3a;border-radius:2px}
+::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
 
 /* ── Input number hide arrows ── */
 input[type=number]{-moz-appearance:textfield}
 input[type=number]::-webkit-outer-spin-button,
 input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 
-/* ── BET ROW: side by side always, stack only on very small ── */
+/* ── bet-row: side by side on desktop, stacked on mobile ── */
 .bet-row{display:flex;gap:8px;}
-@media(max-width:420px){
-  .bet-row{flex-direction:column;}
+@media(max-width:500px){
+  .bet-row{flex-direction:column!important;}
 }
 
-/* ── BOTTOM ROW: chat | bets side by side, collapse on mobile ── */
-.bottom-row{display:flex;gap:0;}
-.chat-col{width:clamp(130px,36%,250px);flex-shrink:0;border-right:1px solid #1f2937;display:flex;flex-direction:column;min-height:200px;max-height:280px;}
-@media(max-width:480px){
+/* ── chat+bets row: side by side, collapse on very small ── */
+.bottom-row{display:flex;gap:0;align-items:flex-start;}
+@media(max-width:420px){
   .bottom-row{flex-direction:column;}
-  .chat-col{width:100%!important;border-right:none!important;border-bottom:1px solid #1f2937;min-height:150px;max-height:180px;}
+  .chat-col{width:100%!important;border-right:none!important;border-bottom:1px solid #1f2937;max-height:140px!important;}
 }
 </style>
 </head>
