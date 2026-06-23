@@ -18,12 +18,17 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ════════════════════════════════════════════════════
 //  DATABASE
 // ════════════════════════════════════════════════════
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
-});
+const DB_URL = process.env.DATABASE_URL;
+const pool = DB_URL ? new Pool({
+  connectionString: DB_URL,
+  ssl: { rejectUnauthorized: false },
+  connectionTimeoutMillis: 5000,
+}) : null;
+const dbReady = { ok: false };
+
 
 async function initDB() {
+  if(!pool){ console.log('⚠️  No DATABASE_URL — running without database (data will not persist)'); return; }
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
       phone       TEXT PRIMARY KEY,
@@ -63,11 +68,13 @@ async function initDB() {
       played_at   TIMESTAMPTZ DEFAULT NOW()
     );
   `);
+  dbReady.ok = true;
   console.log('✅ Database ready');
 }
 
 // ── DB HELPERS ──────────────────────────────────────
 async function getUser(phone) {
+  if(!dbReady.ok) return null;
   const r = await pool.query('SELECT * FROM users WHERE phone=$1', [phone]);
   return r.rows[0] || null;
 }
@@ -468,8 +475,14 @@ function buildAdminState() {
 //  REST API
 // ════════════════════════════════════════════════════
 
+// DB guard middleware for auth/balance routes
+const requireDB = (req,res,next) => {
+  if(!dbReady.ok) return res.json({ok:false,msg:'Database not ready yet. Try again in a moment.'});
+  next();
+};
+
 // ── Auth ──
-app.post('/api/register', async (req,res)=>{
+app.post('/api/register', requireDB, async (req,res)=>{
   try {
     const {phone,username,password,dob,referralCode}=req.body||{};
     if(!phone||!username||!password) return res.json({ok:false,msg:'Missing fields'});
@@ -494,7 +507,7 @@ app.post('/api/register', async (req,res)=>{
   } catch(e){console.error(e);res.json({ok:false,msg:'Server error'});}
 });
 
-app.post('/api/login', async (req,res)=>{
+app.post('/api/login', requireDB, async (req,res)=>{
   try {
     const {phone,password}=req.body||{};
     if(!phone||!password) return res.json({ok:false,msg:'Missing fields'});
@@ -507,7 +520,7 @@ app.post('/api/login', async (req,res)=>{
 });
 
 // ── Balance ──
-app.get('/api/balance/:phone', async (req,res)=>{
+app.get('/api/balance/:phone', requireDB, async (req,res)=>{
   try {
     const user=await getUser(req.params.phone);
     if(!user) return res.json({ok:false});
@@ -515,7 +528,7 @@ app.get('/api/balance/:phone', async (req,res)=>{
   } catch(e){res.json({ok:false});}
 });
 
-app.post('/api/balance', async (req,res)=>{
+app.post('/api/balance', requireDB, async (req,res)=>{
   try {
     const {phone,balance}=req.body||{};
     if(!phone||balance===undefined) return res.json({ok:false});
