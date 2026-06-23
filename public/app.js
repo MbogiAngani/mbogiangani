@@ -130,7 +130,7 @@ function _engineStart() {
   osc1.type='sawtooth'; osc1.frequency.value=55;
   osc2.type='sawtooth'; osc2.frequency.value=58.5;
   oscGain.gain.setValueAtTime(0,c.currentTime);
-  oscGain.gain.linearRampToValueAtTime(0.042,c.currentTime+1.2);
+  oscGain.gain.linearRampToValueAtTime(0.021,c.currentTime+1.2);
   osc1.connect(oscGain); osc2.connect(oscGain); oscGain.connect(c.destination);
   osc1.start(); osc2.start();
   const buf=c.createBuffer(1,c.sampleRate*2,c.sampleRate);
@@ -140,12 +140,12 @@ function _engineStart() {
   const bp=c.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=160; bp.Q.value=1.4;
   const noiseGain=c.createGain();
   noiseGain.gain.setValueAtTime(0,c.currentTime);
-  noiseGain.gain.linearRampToValueAtTime(0.02,c.currentTime+1.8);
+  noiseGain.gain.linearRampToValueAtTime(0.01,c.currentTime+1.8);
   noise.connect(bp); bp.connect(noiseGain); noiseGain.connect(c.destination); noise.start();
   const whistle=c.createOscillator(); const wGain=c.createGain();
   whistle.type='sine'; whistle.frequency.value=820;
   wGain.gain.setValueAtTime(0,c.currentTime);
-  wGain.gain.linearRampToValueAtTime(0.007,c.currentTime+2.0);
+  wGain.gain.linearRampToValueAtTime(0.0035,c.currentTime+2.0);
   whistle.connect(wGain); wGain.connect(c.destination); whistle.start();
   _eng={osc1,osc2,oscGain,noise,noiseGain,whistle,wGain};
 }
@@ -162,10 +162,10 @@ function _engineUpdate(mult) {
   const f=55+Math.min(mult*11,240);
   _eng.osc1.frequency.setTargetAtTime(f,c.currentTime,0.3);
   _eng.osc2.frequency.setTargetAtTime(f+3.5,c.currentTime,0.3);
-  _eng.oscGain.gain.setTargetAtTime(0.032+Math.min(mult*0.004,0.05),c.currentTime,0.5);
+  _eng.oscGain.gain.setTargetAtTime(0.016+Math.min(mult*0.002,0.025),c.currentTime,0.5);
   _eng.whistle.frequency.setTargetAtTime(820+Math.min(mult*18,600),c.currentTime,0.4);
-  _eng.wGain.gain.setTargetAtTime(0.005+Math.min(mult*0.001,0.011),c.currentTime,0.5);
-  _eng.noiseGain.gain.setTargetAtTime(0.016+Math.min(mult*0.002,0.022),c.currentTime,0.6);
+  _eng.wGain.gain.setTargetAtTime(0.0025+Math.min(mult*0.0005,0.0055),c.currentTime,0.5);
+  _eng.noiseGain.gain.setTargetAtTime(0.008+Math.min(mult*0.001,0.011),c.currentTime,0.6);
 }
 
 // ── Round start: 3 ascending beeps then engine spool ──
@@ -1557,7 +1557,7 @@ function ChatSidebar({ user, socket }) {
   function send() {
     const t = txt.trim();
     if (!t || !user) return;
-    socket.emit('chat:msg', { username: user.username, text: t });
+    // Message is silently discarded — it vanishes after typing
     setTxt('');
   }
 
@@ -2727,10 +2727,7 @@ function ChatPanel({
   function send() {
     const t = txt.trim();
     if (!t || !user) return;
-    socket.emit('chat:msg', {
-      username: user.username,
-      text: t
-    });
+    // Message is silently discarded — it vanishes after typing
     setTxt('');
   }
   const chatEmojis = ['🔥', '🚀', '💸', '😂', '😭', '🙏', '💀'];
@@ -3374,10 +3371,12 @@ function InstallBanner() {
   }, []);
   if (!show) return null;
   function doInstall() {
-    if (!window._deferredInstall) return;
-    window._deferredInstall.prompt();
-    window._deferredInstall.userChoice.then(() => {
+    const prompt = window._deferredInstall || _deferredInstall;
+    if (!prompt) return;
+    prompt.prompt();
+    prompt.userChoice.then(() => {
       window._deferredInstall = null;
+      _deferredInstall = null;
       setShow(false);
     });
   }
@@ -3638,6 +3637,7 @@ function Game({
     onClick: () => {
       window.__muted = !window.__muted;
       setMuted(window.__muted);
+      if (window.__muted) { _engineStop(); } else { _getCtx(); }
     },
     style: {
       background: muted ? '#1f2937' : 'rgba(239,68,68,0.12)',
