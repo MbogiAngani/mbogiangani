@@ -110,197 +110,175 @@ function scheduleBotChat(phase) {
   });
 }
 
-/* ════════════ SOUND ENGINE (Betika-style) ════════════ */
+/* ════════════ SOUND ENGINE (Betika Aviator authentic) ════════════ */
 const _AC = window.AudioContext || window.webkitAudioContext;
 let _ctx = null;
-let _eng = null; // { osc, gain, noise, noiseGain }
+let _eng = null;
 
 function _getCtx() {
-  if (!_ctx) {
-    try {
-      _ctx = new _AC();
-    } catch (e) {}
-  }
+  if (!_ctx) { try { _ctx = new _AC(); } catch(e){} }
   if (_ctx && _ctx.state === 'suspended') _ctx.resume();
   return _ctx;
 }
 
-// ── Engine: continuous jet turbine ──
+// ── Continuous twin-engine turbine hum (Betika style: layered oscillators + filtered noise) ──
 function _engineStart() {
-  const c = _getCtx();
-  if (!c) return;
+  const c = _getCtx(); if (!c) return;
   _engineStop();
 
-  // Sawtooth oscillator — turbine body
-  const osc = c.createOscillator();
+  // Engine core — two detuned sawtooth for that "jet twin" thickness
+  const osc1 = c.createOscillator();
+  const osc2 = c.createOscillator();
   const oscGain = c.createGain();
-  osc.type = 'sawtooth';
-  osc.frequency.value = 52;
+  osc1.type = 'sawtooth'; osc1.frequency.value = 55;
+  osc2.type = 'sawtooth'; osc2.frequency.value = 58; // slight detune
   oscGain.gain.setValueAtTime(0, c.currentTime);
-  oscGain.gain.linearRampToValueAtTime(0.055, c.currentTime + 1.0);
-  osc.connect(oscGain);
+  oscGain.gain.linearRampToValueAtTime(0.04, c.currentTime + 1.2);
+  osc1.connect(oscGain); osc2.connect(oscGain);
   oscGain.connect(c.destination);
-  osc.start();
+  osc1.start(); osc2.start();
 
-  // Band-pass noise — wind/air intake texture
-  const buf = c.createBuffer(1, c.sampleRate * 3, c.sampleRate);
+  // Air-intake noise — band-pass filtered white noise
+  const buf = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
   const bd = buf.getChannelData(0);
-  for (let i = 0; i < bd.length; i++) bd[i] = Math.random() * 2 - 1;
+  for (let i=0;i<bd.length;i++) bd[i]=Math.random()*2-1;
   const noise = c.createBufferSource();
-  noise.buffer = buf;
-  noise.loop = true;
+  noise.buffer = buf; noise.loop = true;
   const bp = c.createBiquadFilter();
-  bp.type = 'bandpass';
-  bp.frequency.value = 140;
-  bp.Q.value = 1.2;
+  bp.type='bandpass'; bp.frequency.value=160; bp.Q.value=1.5;
   const noiseGain = c.createGain();
   noiseGain.gain.setValueAtTime(0, c.currentTime);
-  noiseGain.gain.linearRampToValueAtTime(0.028, c.currentTime + 1.5);
-  noise.connect(bp);
-  bp.connect(noiseGain);
-  noiseGain.connect(c.destination);
+  noiseGain.gain.linearRampToValueAtTime(0.022, c.currentTime + 1.8);
+  noise.connect(bp); bp.connect(noiseGain); noiseGain.connect(c.destination);
   noise.start();
-  _eng = {
-    osc,
-    oscGain,
-    noise,
-    noiseGain
-  };
+
+  // High-freq whistle — thin sine for turbine whine
+  const whistle = c.createOscillator();
+  const wGain = c.createGain();
+  whistle.type = 'sine'; whistle.frequency.value = 820;
+  wGain.gain.setValueAtTime(0, c.currentTime);
+  wGain.gain.linearRampToValueAtTime(0.008, c.currentTime + 2.0);
+  whistle.connect(wGain); wGain.connect(c.destination);
+  whistle.start();
+
+  _eng = { osc1, osc2, oscGain, noise, noiseGain, whistle, wGain };
 }
+
 function _engineStop() {
   if (!_eng) return;
-  try {
-    _eng.osc.stop();
-  } catch (e) {}
-  try {
-    _eng.noise.stop();
-  } catch (e) {}
+  try { _eng.osc1.stop(); } catch(e){}
+  try { _eng.osc2.stop(); } catch(e){}
+  try { _eng.noise.stop(); } catch(e){}
+  try { _eng.whistle.stop(); } catch(e){}
   _eng = null;
 }
+
 function _engineUpdate(mult) {
-  const c = _getCtx();
-  if (!c || !_eng) return;
-  // Frequency: 52Hz at 1x → 230Hz at max
-  const freq = 52 + Math.min(mult * 10, 200);
-  _eng.osc.frequency.setTargetAtTime(freq, c.currentTime, 0.35);
-  // Volume also rises slightly
-  const vol = 0.045 + Math.min(mult * 0.006, 0.07);
-  _eng.oscGain.gain.setTargetAtTime(vol, c.currentTime, 0.5);
-  // Noise BP frequency rises — more 'whoosh'
-  _eng.noiseGain.gain.setTargetAtTime(0.02 + Math.min(mult * 0.003, 0.035), c.currentTime, 0.6);
+  const c = _getCtx(); if (!c || !_eng) return;
+  // Frequency rises with multiplier — 55→280Hz range
+  const f = 55 + Math.min(mult * 11, 240);
+  _eng.osc1.frequency.setTargetAtTime(f, c.currentTime, 0.3);
+  _eng.osc2.frequency.setTargetAtTime(f + 3.5, c.currentTime, 0.3);
+  // Volume slightly increases
+  const v = 0.035 + Math.min(mult * 0.005, 0.055);
+  _eng.oscGain.gain.setTargetAtTime(v, c.currentTime, 0.5);
+  // Whistle rises faster — gives that "climbing" tension
+  const wf = 820 + Math.min(mult * 18, 600);
+  _eng.whistle.frequency.setTargetAtTime(wf, c.currentTime, 0.4);
+  _eng.wGain.gain.setTargetAtTime(0.006 + Math.min(mult*0.001, 0.012), c.currentTime, 0.5);
+  // Noise bandpass shifts up for "more wind"
+  // (bp not directly stored, but noiseGain volume increases)
+  _eng.noiseGain.gain.setTargetAtTime(0.018 + Math.min(mult*0.002, 0.025), c.currentTime, 0.6);
 }
 
-// ── Round start: spool-up jingle (3 rising beeps then engine starts) ──
+// ── Round start: Betika 3-beep spool-up then engine kicks in ──
 function playRoundStart() {
-  const c = _getCtx();
-  if (!c) return;
-  [440, 550, 660].forEach((freq, i) => {
-    setTimeout(() => {
-      const o = c.createOscillator();
-      const g = c.createGain();
-      o.type = 'sine';
-      o.frequency.value = freq;
-      g.gain.setValueAtTime(0.08, c.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.18);
-      o.connect(g);
-      g.connect(c.destination);
-      o.start();
-      o.stop(c.currentTime + 0.2);
-    }, i * 120);
-  });
-  // Engine spools up 400ms after last beep
-  setTimeout(() => _engineStart(), 420);
-}
-
-// ── Crash: engine cuts then BOOM + falling whine ──
-function playCrash() {
-  const c = _getCtx();
-  if (!c) return;
-  _engineStop();
-
-  // Boom — noise burst
-  const blen = Math.floor(c.sampleRate * 1.5);
-  const bbuf = c.createBuffer(1, blen, c.sampleRate);
-  const bd = bbuf.getChannelData(0);
-  for (let i = 0; i < blen; i++) bd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / blen, 0.3);
-  const bsrc = c.createBufferSource();
-  bsrc.buffer = bbuf;
-  const blp = c.createBiquadFilter();
-  blp.type = 'lowpass';
-  blp.frequency.value = 650;
-  const bg = c.createGain();
-  bg.gain.setValueAtTime(0.55, c.currentTime);
-  bg.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 1.4);
-  bsrc.connect(blp);
-  blp.connect(bg);
-  bg.connect(c.destination);
-  bsrc.start();
-
-  // Falling whine
-  const wo = c.createOscillator();
-  const wg = c.createGain();
-  wo.type = 'sawtooth';
-  wo.frequency.setValueAtTime(500, c.currentTime);
-  wo.frequency.exponentialRampToValueAtTime(35, c.currentTime + 1.0);
-  wg.gain.setValueAtTime(0.14, c.currentTime);
-  wg.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 1.0);
-  wo.connect(wg);
-  wg.connect(c.destination);
-  wo.start();
-  wo.stop(c.currentTime + 1.0);
-}
-
-// ── Cashout: bright WIN chime (3 ascending notes) ──
-function playCashout(mult) {
-  const c = _getCtx();
-  if (!c) return;
-  const base = Math.min(480 + mult * 25, 1200);
-  [[base, 0], [base * 1.25, 0.12], [base * 1.5, 0.26]].forEach(([freq, delay]) => {
+  const c = _getCtx(); if (!c) return;
+  // 3 ascending beeps exactly like Betika: short, punchy
+  [440, 554, 659].forEach((freq, i) => {
+    const t = c.currentTime + i * 0.13;
     const o = c.createOscillator();
     const g = c.createGain();
     o.type = 'sine';
     o.frequency.value = freq;
-    g.gain.setValueAtTime(0, c.currentTime + delay);
-    g.gain.linearRampToValueAtTime(0.14, c.currentTime + delay + 0.025);
-    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + delay + 0.35);
-    o.connect(g);
-    g.connect(c.destination);
-    o.start(c.currentTime + delay);
-    o.stop(c.currentTime + delay + 0.4);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.12, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.11);
+    o.connect(g); g.connect(c.destination);
+    o.start(t); o.stop(t + 0.13);
+  });
+  // Engine spools up 360ms after last beep
+  setTimeout(() => _engineStart(), 400);
+}
+
+// ── Crash: engine cut + heavy boom + falling whine (Betika style) ──
+function playCrash() {
+  const c = _getCtx(); if (!c) return;
+  _engineStop();
+
+  // BOOM — deep noise burst with low-pass
+  const blen = Math.floor(c.sampleRate * 1.8);
+  const bbuf = c.createBuffer(1, blen, c.sampleRate);
+  const bd = bbuf.getChannelData(0);
+  for (let i=0;i<blen;i++) bd[i]=(Math.random()*2-1)*Math.pow(1-i/blen, 0.25);
+  const bsrc = c.createBufferSource(); bsrc.buffer = bbuf;
+  const lp = c.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=500;
+  const bg = c.createGain();
+  bg.gain.setValueAtTime(0.6, c.currentTime);
+  bg.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 1.6);
+  bsrc.connect(lp); lp.connect(bg); bg.connect(c.destination);
+  bsrc.start();
+
+  // Falling whine — sawtooth pitch drop
+  const wo = c.createOscillator();
+  const wg = c.createGain();
+  wo.type = 'sawtooth';
+  wo.frequency.setValueAtTime(480, c.currentTime);
+  wo.frequency.exponentialRampToValueAtTime(30, c.currentTime + 1.1);
+  wg.gain.setValueAtTime(0.16, c.currentTime);
+  wg.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 1.1);
+  wo.connect(wg); wg.connect(c.destination);
+  wo.start(); wo.stop(c.currentTime + 1.2);
+}
+
+// ── Cashout: Betika 3-note ascending WIN chime ──
+function playCashout(mult) {
+  const c = _getCtx(); if (!c) return;
+  const base = Math.min(500 + mult * 22, 1100);
+  [[base, 0], [base*1.26, 0.11], [base*1.5, 0.24]].forEach(([freq, delay]) => {
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0, c.currentTime+delay);
+    g.gain.linearRampToValueAtTime(0.15, c.currentTime+delay+0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime+delay+0.32);
+    o.connect(g); g.connect(c.destination);
+    o.start(c.currentTime+delay); o.stop(c.currentTime+delay+0.38);
   });
 }
 
-// ── Bet click ──
+// ── Bet click: soft tick ──
 function playBet() {
-  const c = _getCtx();
-  if (!c) return;
+  const c = _getCtx(); if (!c) return;
   const o = c.createOscillator();
   const g = c.createGain();
-  o.type = 'sine';
-  o.frequency.setValueAtTime(600, c.currentTime);
-  o.frequency.exponentialRampToValueAtTime(380, c.currentTime + 0.08);
-  g.gain.setValueAtTime(0.1, c.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.09);
-  o.connect(g);
-  g.connect(c.destination);
-  o.start();
-  o.stop(c.currentTime + 0.1);
+  o.type = 'sine'; o.frequency.value = 620;
+  g.gain.setValueAtTime(0.08, c.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.055);
+  o.connect(g); g.connect(c.destination);
+  o.start(); o.stop(c.currentTime + 0.065);
 }
 
-// ── Countdown tick (last 3s) ──
+// ── Countdown tick ──
 function playCountdownTick() {
-  const c = _getCtx();
-  if (!c) return;
+  const c = _getCtx(); if (!c) return;
   const o = c.createOscillator();
   const g = c.createGain();
-  o.type = 'square';
-  o.frequency.value = 320;
-  g.gain.setValueAtTime(0.05, c.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.06);
-  o.connect(g);
-  g.connect(c.destination);
-  o.start();
-  o.stop(c.currentTime + 0.07);
+  o.type = 'square'; o.frequency.value = 400;
+  g.gain.setValueAtTime(0.055, c.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.055);
+  o.connect(g); g.connect(c.destination);
+  o.start(); o.stop(c.currentTime + 0.065);
 }
 
 /* ════════════ AUTH WALL ════════════ */
@@ -919,13 +897,16 @@ function HistoryBar({
 /* ════════════ GAME CANVAS ════════════ */
 function GameCanvas({
   gameState,
-  multiplier
+  multiplier,
+  serverStartedAt
 }) {
   const canvasRef = useRef(null);
   const gsRef = useRef(gameState);
   const multRef = useRef(multiplier);
+  const satRef = useRef(serverStartedAt);
   gsRef.current = gameState;
   multRef.current = multiplier;
+  satRef.current = serverStartedAt;
   const state = useRef({
     pts: [],
     visualStart: null,
@@ -1002,7 +983,9 @@ function GameCanvas({
         st.smokeParticles = [];
       }
       if (gs === FLYING && !st.visualStart) {
-        st.visualStart = now;
+        // Use server startedAt so plane position is correct after refresh
+        const sat = satRef.current;
+        st.visualStart = (sat && sat > 0 && now - sat < 600000) ? sat : now;
       }
       if (gs === CRASHED && !st.crashAt) {
         st.crashAt = now;
@@ -1595,8 +1578,7 @@ function mkBotWithTarget() {
     target: parseFloat(target.toFixed(2))
   };
 }
-
-/* ════════════ CHAT SIDEBAR (inline, no scroll-push) ════════════ */
+/* ════════════ CHAT SIDEBAR (fixed height, no scroll-push) ════════════ */
 function ChatSidebar({ user, socket }) {
   const [msgs, setMsgs] = React.useState([]);
   const [txt, setTxt] = React.useState('');
@@ -1619,23 +1601,19 @@ function ChatSidebar({ user, socket }) {
     setTxt('');
   }
 
-  const ACOLORS = ['#EF4444','#F97316','#EAB308','#22C55E','#3B82F6','#A855F7','#EC4899'];
-  function ac(name) {
-    let h = 0; for (let i=0;i<name.length;i++) h=name.charCodeAt(i)+((h<<5)-h);
-    return ACOLORS[Math.abs(h)%ACOLORS.length];
-  }
+  const ACOLORS=['#EF4444','#F97316','#EAB308','#22C55E','#3B82F6','#A855F7','#EC4899'];
+  function ac(name){let h=0;for(let i=0;i<name.length;i++)h=name.charCodeAt(i)+((h<<5)-h);return ACOLORS[Math.abs(h)%ACOLORS.length];}
 
-  // Show last 8 messages, newest at bottom, NO scrollIntoView - fixed container
-  const visible = msgs.slice(-8);
+  // Show last 9 messages, newest at bottom, NO auto-scroll
+  const visible = msgs.slice(-9);
 
-  return React.createElement('div', { style:{ display:'flex', flexDirection:'column', height:'100%' } },
-    // Messages area — fixed, no scroll push
+  return React.createElement('div', { style:{ display:'flex', flexDirection:'column', height:'100%', minHeight:180 } },
     React.createElement('div', {
       style: {
-        flex:1, overflowY:'hidden', padding:'4px 6px',
+        flex:1, overflow:'hidden', padding:'4px 6px',
         display:'flex', flexDirection:'column', justifyContent:'flex-end', gap:3,
-        maskImage:'linear-gradient(to bottom, transparent 0%, black 30%)',
-        WebkitMaskImage:'linear-gradient(to bottom, transparent 0%, black 30%)'
+        maskImage:'linear-gradient(to bottom, transparent 0%, black 28%)',
+        WebkitMaskImage:'linear-gradient(to bottom, transparent 0%, black 28%)'
       }
     },
       visible.map(m => React.createElement('div', {
@@ -1643,15 +1621,14 @@ function ChatSidebar({ user, socket }) {
         style: { display:'flex', gap:5, alignItems:'flex-start', animation:'fadeIn 0.35s ease', flexShrink:0 }
       },
         React.createElement('div', {
-          style:{ width:18, height:18, borderRadius:'50%', background:ac(m.username), display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, fontWeight:900, color:'#fff', flexShrink:0 }
+          style:{ width:18, height:18, borderRadius:'50%', background:ac(m.username), display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, fontWeight:900, color:'#fff', flexShrink:0, marginTop:1 }
         }, m.username[0]),
         React.createElement('div', { style:{ flex:1, minWidth:0 } },
-          React.createElement('span', { style:{ fontSize:9, fontWeight:700, color:'#C084FC', marginRight:4 } }, m.username),
-          React.createElement('span', { style:{ fontSize:10, color:'#CBD5E1', wordBreak:'break-word', lineHeight:1.3 } }, m.text)
+          React.createElement('span', { style:{ fontSize:9, fontWeight:700, color:'#C084FC', marginRight:3 } }, m.username),
+          React.createElement('span', { style:{ fontSize:10, color:'#CBD5E1', wordBreak:'break-word', lineHeight:1.35 } }, m.text)
         )
       ))
     ),
-    // Input
     React.createElement('div', { style:{ padding:'5px 6px', borderTop:'1px solid #1f2937', flexShrink:0 } },
       React.createElement('div', { style:{ display:'flex', gap:4 } },
         React.createElement('input', {
@@ -1663,7 +1640,7 @@ function ChatSidebar({ user, socket }) {
         }),
         React.createElement('button', {
           onClick:send, disabled:!user||!txt.trim(),
-          style:{ padding:'5px 8px', background: user&&txt.trim()?'#2563EB':'#1a1d2e', border:'none', borderRadius:6, color: user&&txt.trim()?'#fff':'#374151', fontSize:10, cursor: user&&txt.trim()?'pointer':'not-allowed' }
+          style:{ padding:'5px 9px', background:user&&txt.trim()?'#2563EB':'#1a1d2e', border:'none', borderRadius:6, color:user&&txt.trim()?'#fff':'#374151', fontSize:11, cursor:user&&txt.trim()?'pointer':'not-allowed', fontWeight:700 }
         }, '▶')
       )
     )
@@ -1689,8 +1666,10 @@ function LivePanel({
   })));
   const gsRef = useRef(gameState);
   const multRef = useRef(multiplier);
+  const satRef = useRef(serverStartedAt);
   gsRef.current = gameState;
   multRef.current = multiplier;
+  satRef.current = serverStartedAt;
   useEffect(() => {
     if (gameState === BETTING) {
       // Reset all bots for new round
@@ -1791,7 +1770,7 @@ function LivePanel({
     }
   }, displayBets.length, " players")), /*#__PURE__*/React.createElement("div", {
     style: {
-      maxHeight: 180,
+      height: 150,
       overflowY: 'auto'
     }
   }, /*#__PURE__*/React.createElement("table", {
@@ -2780,7 +2759,12 @@ function ChatPanel({
     };
   }, [open]);
   React.useEffect(() => {
-    if (open) setUnread(0);
+    if (open) {
+      setUnread(0);
+      setTimeout(() => bottomRef.current?.scrollIntoView({
+        behavior: 'smooth'
+      }), 100);
+    }
   }, [open, msgs]);
   function send() {
     const t = txt.trim();
@@ -2880,14 +2864,11 @@ function ChatPanel({
   }, "✕")), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
-      overflowY: 'hidden',
+      overflowY: 'auto',
       padding: '8px 12px',
       display: 'flex',
-      flexDirection: 'column-reverse',
-      gap: 4,
-      position: 'relative',
-      maskImage: 'linear-gradient(to bottom, transparent 0%, black 25%)',
-      WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 25%)'
+      flexDirection: 'column',
+      gap: 5
     }
   }, msgs.length === 0 && /*#__PURE__*/React.createElement("div", {
     style: {
@@ -2896,13 +2877,12 @@ function ChatPanel({
       textAlign: 'center',
       marginTop: 20
     }
-  }, "Hakuna messages bado..."), [...msgs].reverse().map(m => /*#__PURE__*/React.createElement("div", {
+  }, "Hakuna messages bado..."), msgs.map(m => /*#__PURE__*/React.createElement("div", {
     key: m.id,
     style: {
       display: 'flex',
       gap: 6,
-      alignItems: 'flex-start',
-      animation: 'fadeIn 0.4s ease'
+      alignItems: 'flex-start'
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
@@ -3524,17 +3504,15 @@ function Game({
   const [mult, setMult] = useState(1.00);
   const [history, setHistory] = useState([2.14, 1.43, 8.72, 1.07, 45.3, 3.21, 1.88, 2.66, 1.15, 12.4]);
   const [cd, setCd] = useState(5);
+  const [startedAt, setStartedAt] = useState(null);
   const [onlineCount, setOnlineCount] = useState(247);
 
   // Fluctuate online count 100-500
   useEffect(() => {
     const iv = setInterval(() => {
-      setOnlineCount(n => {
-        const delta = Math.floor(Math.random()*7)-3;
-        return Math.max(100, Math.min(500, n+delta));
-      });
+      setOnlineCount(n => Math.max(100, Math.min(500, n + Math.floor(Math.random()*7)-3)));
     }, 3000);
-    return ()=>clearInterval(iv);
+    return () => clearInterval(iv);
   }, []);
 
   // Persist balance changes to localStorage
@@ -3549,6 +3527,7 @@ function Game({
   const prevGsRef = useRef(null);
   const prevCdRef = useRef(null);
   const engineTickRef = useRef(null);
+  const multRef2 = useRef(1);
   useEffect(() => {
     socket.on('connect', () => setConnected(true));
     socket.on('seed:reveal', data => setLastSeed({
@@ -3583,8 +3562,8 @@ function Game({
       if (data.phase === FLYING && prev === FLYING) {
         if (!engineTickRef.current) {
           engineTickRef.current = setInterval(() => {
-            if (!window.__muted) _engineUpdate(data.multiplier || 1);
-          }, 500);
+            if (!window.__muted) _engineUpdate(multRef2.current || 1);
+          }, 400);
         }
       }
       // Countdown tick in last 3 seconds
@@ -3598,10 +3577,12 @@ function Game({
       prevCdRef.current = data.countdown;
       setGs(data.phase);
       setMult(data.multiplier);
+      multRef2.current = data.multiplier;
       setHistory(data.history);
       setCd(data.countdown);
       if (data.serverHash) setServerHash(data.serverHash);
-      if (data.serverHash) setServerHash(data.serverHash);
+      if (data.startedAt) setStartedAt(data.startedAt);
+      if (data.phase === BETTING) setStartedAt(null);
     });
     return () => {
       socket.off('connect');
@@ -3632,6 +3613,9 @@ function Game({
     amount: winCelebration.amount,
     multiplier: winCelebration.multiplier,
     onDone: () => setWinCelebration(null)
+  }), /*#__PURE__*/React.createElement(ChatPanel, {
+    user: user,
+    socket: socket
   }), /*#__PURE__*/React.createElement(InstallBanner, null), showDeposit && /*#__PURE__*/React.createElement(DepositModal, {
     balance: balance,
     setBalance: setBalance,
@@ -3676,19 +3660,27 @@ function Game({
       boxShadow: '0 0 18px rgba(239,68,68,0.4)'
     }
   }, "✈ MBOGI ANGANI"), /*#__PURE__*/React.createElement("div", {
-    style: { display:'flex', alignItems:'center', gap:8 }
-  },
-    /*#__PURE__*/React.createElement("div", {
-      style: { display:'flex', alignItems:'center', gap:4 }
-    },
-      /*#__PURE__*/React.createElement("div", { style:{ width:6, height:6, background:connected?'#4ADE80':'#EF4444', borderRadius:'50%', animation:'pulse 2s infinite' } }),
-      /*#__PURE__*/React.createElement("span", { style:{ fontSize:8, color:connected?'#4ADE80':'#EF4444', fontWeight:700, letterSpacing:1 } }, connected?'LIVE':'...')
-    ),
-    /*#__PURE__*/React.createElement("div", { style:{ display:'flex', alignItems:'center', gap:4, background:'#0f1218', borderRadius:6, padding:'3px 8px' } },
-      /*#__PURE__*/React.createElement("div", { style:{ width:6, height:6, background:'#22C55E', borderRadius:'50%', animation:'pulse 2s infinite' } }),
-      /*#__PURE__*/React.createElement("span", { style:{ fontSize:9, color:'#22C55E', fontWeight:700 } }, onlineCount, ' online')
-    )
-  ), /*#__PURE__*/React.createElement("button", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 4
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 6,
+      height: 6,
+      background: connected ? '#4ADE80' : '#EF4444',
+      borderRadius: '50%',
+      animation: 'pulse 2s infinite'
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 8,
+      color: connected ? '#4ADE80' : '#EF4444',
+      fontWeight: 700,
+      letterSpacing: 1
+    }
+  }, connected ? 'LIVE' : '...')), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       window.__muted = !window.__muted;
       setMuted(window.__muted);
@@ -3701,8 +3693,20 @@ function Game({
       padding: '2px 4px',
       opacity: 0.7
     },
-    title: muted ? 'Unmute' : 'Mute'
-  }, muted ? '🔇' : '🔊')), /*#__PURE__*/React.createElement("div", {
+    title: muted ? 'Unmute' : 'Mute',
+    style: {
+      background: muted ? '#1f2937' : 'rgba(239,68,68,0.15)',
+      border: muted ? '1px solid #374151' : '1px solid #EF444466',
+      borderRadius: 8,
+      cursor: 'pointer',
+      fontSize: 16,
+      padding: '5px 9px',
+      color: '#fff',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 4
+    }
+  }, muted ? '🔇' : '🔊', /*#__PURE__*/React.createElement('span',{style:{fontSize:9,color:muted?'#6B7280':'#F97316',fontWeight:700}}, muted?'OFF':'ON'))), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       alignItems: 'center',
@@ -3763,7 +3767,19 @@ function Game({
       fontWeight: 700,
       marginLeft: 2
     }
-  }, "LOGOUT")))),  /*#__PURE__*/React.createElement("div", {
+  }, "LOGOUT")))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 10,
+      padding: '4px 0 8px'
+    }
+  }, /*#__PURE__*/React.createElement(ReferralWidget, {
+    user: user
+  }), /*#__PURE__*/React.createElement(RGWidget, {
+    user: user
+  })), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       gap: 8,
@@ -3779,16 +3795,27 @@ function Game({
       borderRadius: 8,
       color: '#fff',
       fontWeight: 800,
-      fontSize: 'clamp(9px,2.5vw,11px)',
+      fontSize: 11,
       cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 5,
+      gap: 6,
       boxShadow: '0 2px 10px rgba(22,163,74,0.35)',
       letterSpacing: .5
     }
-  }, "↑ DEPOSIT"), /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "14",
+    height: "14",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "#fff",
+    strokeWidth: "2.5",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M12 5v14M5 12l7-7 7 7"
+  })), "DEPOSIT"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowWithdraw(true),
     style: {
       flex: 1,
@@ -3807,34 +3834,62 @@ function Game({
       boxShadow: '0 2px 10px rgba(147,51,234,0.3)',
       letterSpacing: .5
     }
-  }, "↓ WITHDRAW"))), /*#__PURE__*/React.createElement(HistoryBar, {
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "14",
+    height: "14",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "#fff",
+    strokeWidth: "2.5",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M12 19V5M5 12l7 7 7-7"
+  })), "WITHDRAW"))), /*#__PURE__*/React.createElement(HistoryBar, {
     history: history
   }), /*#__PURE__*/React.createElement(GameCanvas, {
     gameState: gs,
-    multiplier: mult
+    multiplier: mult,
+    serverStartedAt: startedAt
   }), gs === BETTING && /*#__PURE__*/React.createElement(Countdown, {
     val: cd,
     max: 5
-  }), /*#__PURE__*/React.createElement("div", {
-    className: "bottom-row", style: { display:'flex', gap:0, alignItems:'flex-start' }
+  }),
+  /* ── BET PANELS: side by side, always first below canvas ── */
+  /*#__PURE__*/React.createElement("div", {
+    className: "bet-row",
+    style: { display:'flex', gap:8, padding:'8px 8px 0' }
+  },
+    /*#__PURE__*/React.createElement(BetPanel, { gameState:gs, balance:balance, setBalance:setBalance, multiplier:mult, onWin:handleWin }),
+    /*#__PURE__*/React.createElement(BetPanel, { gameState:gs, balance:balance, setBalance:setBalance, multiplier:mult, onWin:handleWin })
+  ),
+  /* ── BOTTOM ROW: Chat left | AllBets right, side by side ── */
+  /*#__PURE__*/React.createElement("div", {
+    className: "bottom-row",
+    style: { display:'flex', gap:0, borderTop:'1px solid #1f2937', marginTop:8 }
   },
     /*#__PURE__*/React.createElement("div", {
-      className: "chat-col", style: { width:'clamp(150px,26%,240px)', flexShrink:0, borderRight:'1px solid #1f2937', borderTop:'1px solid #1f2937', maxHeight:360, overflow:'hidden', display:'flex', flexDirection:'column' }
+      className: "chat-col",
+      style: { width:'clamp(140px,38%,260px)', flexShrink:0, borderRight:'1px solid #1f2937', display:'flex', flexDirection:'column' }
     },
-      /*#__PURE__*/React.createElement("div", { style:{ padding:'6px 10px', borderBottom:'1px solid #1f2937', fontSize:10, fontWeight:800, color:'#F97316', letterSpacing:1, flexShrink:0 } }, "💬 LIVE CHAT"),
+      /*#__PURE__*/React.createElement("div", {
+        style:{ padding:'6px 10px', borderBottom:'1px solid #1f2937', fontSize:10, fontWeight:800, color:'#F97316', display:'flex', alignItems:'center', gap:6, flexShrink:0 }
+      },
+        /*#__PURE__*/React.createElement("div",{style:{width:6,height:6,background:'#22C55E',borderRadius:'50%',animation:'pulse 2s infinite'}}),
+        "LIVE CHAT"
+      ),
       /*#__PURE__*/React.createElement(ChatSidebar, { user:user, socket:socket })
     ),
     /*#__PURE__*/React.createElement("div", { style:{ flex:1, minWidth:0 } },
-      /*#__PURE__*/React.createElement("div", {
-        className: "bet-row",
-        style: { display:'flex', gap:8, padding:'8px 8px 6px' }
-      },
-        /*#__PURE__*/React.createElement(BetPanel, { gameState:gs, balance:balance, setBalance:setBalance, multiplier:mult, onWin:handleWin }),
-        /*#__PURE__*/React.createElement(BetPanel, { gameState:gs, balance:balance, setBalance:setBalance, multiplier:mult, onWin:handleWin })
-      ),
-      /*#__PURE__*/React.createElement("div", { style:{ padding:'0 8px 8px' } },
-        React.createElement(LivePanel, { gameState: gs, multiplier: mult }))
+      /*#__PURE__*/React.createElement(LivePanel, { gameState:gs, multiplier:mult })
     )
+  ),
+  /* ── Online count bar ── */
+  /*#__PURE__*/React.createElement("div", {
+    style:{ padding:'5px 10px', display:'flex', alignItems:'center', gap:6, borderTop:'1px solid #1f2937', background:'#080810' }
+  },
+    /*#__PURE__*/React.createElement("div",{style:{width:7,height:7,background:'#22C55E',borderRadius:'50%',animation:'pulse 2s infinite'}}),
+    /*#__PURE__*/React.createElement("span",{style:{fontSize:10,color:'#22C55E',fontWeight:700}}, onlineCount, " players online")
   ));
 }
 
@@ -4024,16 +4079,27 @@ function App() {
       borderRadius: 8,
       color: '#fff',
       fontWeight: 800,
-      fontSize: 'clamp(9px,2.5vw,11px)',
+      fontSize: 11,
       cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 5,
+      gap: 6,
       boxShadow: '0 2px 10px rgba(22,163,74,0.35)',
       letterSpacing: .5
     }
-  }, "↑ DEPOSIT"), /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "14",
+    height: "14",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "#fff",
+    strokeWidth: "2.5",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M12 5v14M5 12l7-7 7 7"
+  })), "DEPOSIT"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setAuthModal('login'),
     style: {
       flex: 1,
@@ -4052,7 +4118,18 @@ function App() {
       boxShadow: '0 2px 10px rgba(147,51,234,0.3)',
       letterSpacing: .5
     }
-  }, "↓ WITHDRAW")), /*#__PURE__*/React.createElement(HistoryBar, {
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "14",
+    height: "14",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "#fff",
+    strokeWidth: "2.5",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M12 19V5M5 12l7 7 7-7"
+  })), "WITHDRAW")), /*#__PURE__*/React.createElement(HistoryBar, {
     history: bgHistory
   }), /*#__PURE__*/React.createElement(GameCanvas, {
     gameState: bgGs,
