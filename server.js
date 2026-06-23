@@ -599,6 +599,7 @@ app.get('/admin.html',(req,res)=>res.status(404).send('Not found'));
 const PORT=process.env.PORT||3000;
 server.listen(PORT, async ()=>{
   console.log(`\n🚀 Mbogi Angani running on port ${PORT}`);
-  await initDB();
+  // Start game immediately — DB connects in background
   startBetting();
+  initDB().catch(e => console.error('DB init error:', e.message));
 });
