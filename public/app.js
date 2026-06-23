@@ -110,197 +110,123 @@ function scheduleBotChat(phase) {
   });
 }
 
-/* ════════════ SOUND ENGINE (Betika-style) ════════════ */
+/* ════════════ SOUND ENGINE (OdiBet/Aviator-style) ════════════ */
 const _AC = window.AudioContext || window.webkitAudioContext;
 let _ctx = null;
-let _eng = null; // { osc, gain, noise, noiseGain }
+let _eng = null;
 
 function _getCtx() {
-  if (!_ctx) {
-    try {
-      _ctx = new _AC();
-    } catch (e) {}
-  }
+  if (!_ctx) { try { _ctx = new _AC(); } catch(e){} }
   if (_ctx && _ctx.state === 'suspended') _ctx.resume();
   return _ctx;
 }
 
-// ── Engine: continuous jet turbine ──
+// ── Continuous rising electronic hum while flying ──
 function _engineStart() {
-  const c = _getCtx();
-  if (!c) return;
+  const c = _getCtx(); if (!c) return;
   _engineStop();
-
-  // Sawtooth oscillator — turbine body
+  // Simple sine wave hum that rises with multiplier
   const osc = c.createOscillator();
-  const oscGain = c.createGain();
-  osc.type = 'sawtooth';
-  osc.frequency.value = 52;
-  oscGain.gain.setValueAtTime(0, c.currentTime);
-  oscGain.gain.linearRampToValueAtTime(0.055, c.currentTime + 1.0);
-  osc.connect(oscGain);
-  oscGain.connect(c.destination);
+  const gain = c.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = 80;
+  gain.gain.setValueAtTime(0, c.currentTime);
+  gain.gain.linearRampToValueAtTime(0.04, c.currentTime + 0.8);
+  osc.connect(gain); gain.connect(c.destination);
   osc.start();
-
-  // Band-pass noise — wind/air intake texture
-  const buf = c.createBuffer(1, c.sampleRate * 3, c.sampleRate);
-  const bd = buf.getChannelData(0);
-  for (let i = 0; i < bd.length; i++) bd[i] = Math.random() * 2 - 1;
-  const noise = c.createBufferSource();
-  noise.buffer = buf;
-  noise.loop = true;
-  const bp = c.createBiquadFilter();
-  bp.type = 'bandpass';
-  bp.frequency.value = 140;
-  bp.Q.value = 1.2;
-  const noiseGain = c.createGain();
-  noiseGain.gain.setValueAtTime(0, c.currentTime);
-  noiseGain.gain.linearRampToValueAtTime(0.028, c.currentTime + 1.5);
-  noise.connect(bp);
-  bp.connect(noiseGain);
-  noiseGain.connect(c.destination);
-  noise.start();
-  _eng = {
-    osc,
-    oscGain,
-    noise,
-    noiseGain
-  };
+  _eng = { osc, gain };
 }
 function _engineStop() {
   if (!_eng) return;
-  try {
-    _eng.osc.stop();
-  } catch (e) {}
-  try {
-    _eng.noise.stop();
-  } catch (e) {}
+  try { _eng.osc.stop(); } catch(e) {}
   _eng = null;
 }
 function _engineUpdate(mult) {
-  const c = _getCtx();
-  if (!c || !_eng) return;
-  // Frequency: 52Hz at 1x → 230Hz at max
-  const freq = 52 + Math.min(mult * 10, 200);
-  _eng.osc.frequency.setTargetAtTime(freq, c.currentTime, 0.35);
-  // Volume also rises slightly
-  const vol = 0.045 + Math.min(mult * 0.006, 0.07);
-  _eng.oscGain.gain.setTargetAtTime(vol, c.currentTime, 0.5);
-  // Noise BP frequency rises — more 'whoosh'
-  _eng.noiseGain.gain.setTargetAtTime(0.02 + Math.min(mult * 0.003, 0.035), c.currentTime, 0.6);
+  const c = _getCtx(); if (!c || !_eng) return;
+  const freq = 80 + Math.min(mult * 8, 180);
+  _eng.osc.frequency.setTargetAtTime(freq, c.currentTime, 0.4);
+  _eng.gain.gain.setTargetAtTime(0.03 + Math.min(mult * 0.003, 0.04), c.currentTime, 0.5);
 }
 
-// ── Round start: spool-up jingle (3 rising beeps then engine starts) ──
+// ── Round start: OdiBet-style 3 ascending electronic beeps ──
 function playRoundStart() {
-  const c = _getCtx();
-  if (!c) return;
-  [440, 550, 660].forEach((freq, i) => {
-    setTimeout(() => {
-      const o = c.createOscillator();
-      const g = c.createGain();
-      o.type = 'sine';
-      o.frequency.value = freq;
-      g.gain.setValueAtTime(0.08, c.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.18);
-      o.connect(g);
-      g.connect(c.destination);
-      o.start();
-      o.stop(c.currentTime + 0.2);
-    }, i * 120);
+  const c = _getCtx(); if (!c) return;
+  [[300, 0], [480, 0.13], [660, 0.26]].forEach(([freq, delay]) => {
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = 'square';
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(0, c.currentTime + delay);
+    g.gain.linearRampToValueAtTime(0.07, c.currentTime + delay + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + delay + 0.11);
+    o.connect(g); g.connect(c.destination);
+    o.start(c.currentTime + delay);
+    o.stop(c.currentTime + delay + 0.15);
   });
-  // Engine spools up 400ms after last beep
-  setTimeout(() => _engineStart(), 420);
+  setTimeout(() => _engineStart(), 350);
 }
 
-// ── Crash: engine cuts then BOOM + falling whine ──
+// ── Crash: quick descending electronic crash ──
 function playCrash() {
-  const c = _getCtx();
-  if (!c) return;
+  const c = _getCtx(); if (!c) return;
   _engineStop();
-
-  // Boom — noise burst
-  const blen = Math.floor(c.sampleRate * 1.5);
-  const bbuf = c.createBuffer(1, blen, c.sampleRate);
-  const bd = bbuf.getChannelData(0);
-  for (let i = 0; i < blen; i++) bd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / blen, 0.3);
-  const bsrc = c.createBufferSource();
-  bsrc.buffer = bbuf;
-  const blp = c.createBiquadFilter();
-  blp.type = 'lowpass';
-  blp.frequency.value = 650;
-  const bg = c.createGain();
-  bg.gain.setValueAtTime(0.55, c.currentTime);
-  bg.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 1.4);
-  bsrc.connect(blp);
-  blp.connect(bg);
-  bg.connect(c.destination);
-  bsrc.start();
-
-  // Falling whine
-  const wo = c.createOscillator();
-  const wg = c.createGain();
-  wo.type = 'sawtooth';
-  wo.frequency.setValueAtTime(500, c.currentTime);
-  wo.frequency.exponentialRampToValueAtTime(35, c.currentTime + 1.0);
-  wg.gain.setValueAtTime(0.14, c.currentTime);
-  wg.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 1.0);
-  wo.connect(wg);
-  wg.connect(c.destination);
-  wo.start();
-  wo.stop(c.currentTime + 1.0);
+  // Two descending square wave bursts
+  [[440, 0], [220, 0.08]].forEach(([freq, delay]) => {
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = 'square';
+    o.frequency.setValueAtTime(freq, c.currentTime + delay);
+    o.frequency.exponentialRampToValueAtTime(freq * 0.3, c.currentTime + delay + 0.25);
+    g.gain.setValueAtTime(0.12, c.currentTime + delay);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + delay + 0.3);
+    o.connect(g); g.connect(c.destination);
+    o.start(c.currentTime + delay);
+    o.stop(c.currentTime + delay + 0.35);
+  });
 }
 
-// ── Cashout: bright WIN chime (3 ascending notes) ──
+// ── Cashout: bright ascending double-beep win sound ──
 function playCashout(mult) {
-  const c = _getCtx();
-  if (!c) return;
-  const base = Math.min(480 + mult * 25, 1200);
-  [[base, 0], [base * 1.25, 0.12], [base * 1.5, 0.26]].forEach(([freq, delay]) => {
+  const c = _getCtx(); if (!c) return;
+  const base = Math.min(520 + mult * 20, 1100);
+  [[base, 0], [base * 1.5, 0.1]].forEach(([freq, delay]) => {
     const o = c.createOscillator();
     const g = c.createGain();
     o.type = 'sine';
     o.frequency.value = freq;
     g.gain.setValueAtTime(0, c.currentTime + delay);
-    g.gain.linearRampToValueAtTime(0.14, c.currentTime + delay + 0.025);
-    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + delay + 0.35);
-    o.connect(g);
-    g.connect(c.destination);
+    g.gain.linearRampToValueAtTime(0.15, c.currentTime + delay + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + delay + 0.28);
+    o.connect(g); g.connect(c.destination);
     o.start(c.currentTime + delay);
-    o.stop(c.currentTime + delay + 0.4);
+    o.stop(c.currentTime + delay + 0.32);
   });
 }
 
-// ── Bet click ──
+// ── Bet click: short electronic tap ──
 function playBet() {
-  const c = _getCtx();
-  if (!c) return;
+  const c = _getCtx(); if (!c) return;
   const o = c.createOscillator();
   const g = c.createGain();
   o.type = 'sine';
-  o.frequency.setValueAtTime(600, c.currentTime);
-  o.frequency.exponentialRampToValueAtTime(380, c.currentTime + 0.08);
-  g.gain.setValueAtTime(0.1, c.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.09);
-  o.connect(g);
-  g.connect(c.destination);
-  o.start();
-  o.stop(c.currentTime + 0.1);
+  o.frequency.value = 520;
+  g.gain.setValueAtTime(0.09, c.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.07);
+  o.connect(g); g.connect(c.destination);
+  o.start(); o.stop(c.currentTime + 0.08);
 }
 
-// ── Countdown tick (last 3s) ──
+// ── Countdown tick ──
 function playCountdownTick() {
-  const c = _getCtx();
-  if (!c) return;
+  const c = _getCtx(); if (!c) return;
   const o = c.createOscillator();
   const g = c.createGain();
   o.type = 'square';
-  o.frequency.value = 320;
-  g.gain.setValueAtTime(0.05, c.currentTime);
+  o.frequency.value = 380;
+  g.gain.setValueAtTime(0.06, c.currentTime);
   g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.06);
-  o.connect(g);
-  g.connect(c.destination);
-  o.start();
-  o.stop(c.currentTime + 0.07);
+  o.connect(g); g.connect(c.destination);
+  o.start(); o.stop(c.currentTime + 0.07);
 }
 
 /* ════════════ AUTH WALL ════════════ */
@@ -919,13 +845,16 @@ function HistoryBar({
 /* ════════════ GAME CANVAS ════════════ */
 function GameCanvas({
   gameState,
-  multiplier
+  multiplier,
+  serverStartedAt
 }) {
   const canvasRef = useRef(null);
   const gsRef = useRef(gameState);
   const multRef = useRef(multiplier);
+  const startedAtRef = useRef(serverStartedAt);
   gsRef.current = gameState;
   multRef.current = multiplier;
+  startedAtRef.current = serverStartedAt;
   const state = useRef({
     pts: [],
     visualStart: null,
@@ -999,10 +928,14 @@ function GameCanvas({
         st.visualStart = null;
         st.crashPos = null;
         st.crashAt = null;
+        st.crashPos = null;
+        st.crashAt = null;
         st.smokeParticles = [];
       }
       if (gs === FLYING && !st.visualStart) {
-        st.visualStart = now;
+        // Use server startedAt if available for accurate plane position on refresh
+        const sat = startedAtRef.current;
+        st.visualStart = (sat && sat > 0) ? sat : now;
       }
       if (gs === CRASHED && !st.crashAt) {
         st.crashAt = now;
@@ -3434,10 +3367,226 @@ function InstallBanner() {
     }
   }, "INSTALL")));
 }
-function Game({
-  user,
-  onLogout
-}) {
+/* ════════════ LEFT CHAT PANEL ════════════ */
+function LeftChatPanel({ user, socket }) {
+  const [msgs, setMsgs] = React.useState([]);
+  const [txt, setTxt] = React.useState('');
+  const [unread, setUnread] = React.useState(0);
+  const bottomRef = React.useRef(null);
+  const isOpen = true; // always open in desktop layout
+
+  React.useEffect(() => {
+    socket.on('chat:history', data => setMsgs(data || []));
+    socket.on('chat', msg => {
+      setMsgs(m => [...m.slice(-79), msg]);
+    });
+    const onBot = e => {
+      setMsgs(m => [...m.slice(-79), e.detail]);
+    };
+    window.addEventListener('bot-chat', onBot);
+    return () => {
+      socket.off('chat:history'); socket.off('chat');
+      window.removeEventListener('bot-chat', onBot);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
+  }, [msgs]);
+
+  function send() {
+    const t = txt.trim();
+    if (!t || !user) return;
+    socket.emit('chat:msg', { username: user.username, text: t });
+    setTxt('');
+  }
+
+  const chatEmojis = ['🔥', '🚀', '💸', '😂', '😭', '🙏', '💀'];
+  const AVATAR_COLORS = ['#EF4444','#F97316','#EAB308','#22C55E','#3B82F6','#A855F7','#EC4899'];
+  function avatarColor(name) {
+    let h = 0; for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + (h << 5) - h;
+    return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+  }
+
+  return React.createElement('div', {
+    style: { display:'flex', flexDirection:'column', height:'100%', background:'#0d0f1e' }
+  },
+    // Header
+    React.createElement('div', {
+      style: { padding:'10px 14px', borderBottom:'1px solid #1a1d2e', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }
+    },
+      React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:8 } },
+        React.createElement('div', { style:{ width:8, height:8, background:'#22C55E', borderRadius:'50%', animation:'pulse 2s infinite' } }),
+        React.createElement('span', { style:{ fontWeight:800, fontSize:12, color:'#F1F5F9', letterSpacing:1 } }, '247 Online'),
+      ),
+      React.createElement('select', {
+        style:{ background:'#1a1d2e', border:'1px solid #2d3148', color:'#9CA3AF', fontSize:10, borderRadius:6, padding:'3px 6px', cursor:'pointer' }
+      }, React.createElement('option', null, 'All Languages'))
+    ),
+    // Messages
+    React.createElement('div', {
+      style: { flex:1, overflowY:'auto', padding:'6px 0', display:'flex', flexDirection:'column', gap:1 }
+    },
+      msgs.length === 0 && React.createElement('div', {
+        style:{ fontSize:10, color:'#374151', textAlign:'center', marginTop:20 }
+      }, 'Chats zitaonekana hapa...'),
+      msgs.map(m => React.createElement('div', {
+        key: m.id,
+        style: { display:'flex', gap:8, alignItems:'flex-start', padding:'5px 10px', borderBottom:'1px solid #0f1120' }
+      },
+        React.createElement('div', {
+          style:{ width:28, height:28, borderRadius:'50%', background:avatarColor(m.username), display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:900, color:'#fff', flexShrink:0 }
+        }, m.username[0]),
+        React.createElement('div', { style:{ flex:1, minWidth:0 } },
+          React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:6, marginBottom:2 } },
+            React.createElement('span', { style:{ fontSize:11, fontWeight:700, color:'#C084FC' } }, m.username),
+            React.createElement('span', { style:{ fontSize:9, color:'#374151' } }, new Date(m.ts).toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'}) )
+          ),
+          React.createElement('span', { style:{ fontSize:11, color:'#CBD5E1', lineHeight:1.4, wordBreak:'break-word' } }, m.text)
+        )
+      )),
+      React.createElement('div', { ref: bottomRef })
+    ),
+    // Input
+    React.createElement('div', { style:{ padding:'8px 10px', borderTop:'1px solid #1a1d2e', flexShrink:0, background:'#080a15' } },
+      React.createElement('div', { style:{ display:'flex', gap:4, marginBottom:5 } },
+        chatEmojis.map(e => React.createElement('button', {
+          key:e, onClick:() => setTxt(t => t+e),
+          style:{ background:'transparent', border:'none', fontSize:14, cursor:'pointer', padding:'1px' }
+        }, e))
+      ),
+      React.createElement('div', { style:{ display:'flex', gap:6 } },
+        React.createElement('input', {
+          value: txt, onChange: e => setTxt(e.target.value),
+          onKeyDown: e => e.key === 'Enter' && send(),
+          placeholder: user ? 'Type a message...' : 'Login to chat',
+          disabled: !user,
+          style:{ flex:1, background:'#1a1d2e', border:'1px solid #2d3148', borderRadius:8, padding:'7px 10px', color:'#F1F5F9', fontSize:11, outline:'none' }
+        }),
+        React.createElement('button', {
+          onClick: send, disabled: !user || !txt.trim(),
+          style:{ padding:'7px 10px', background: user && txt.trim() ? 'linear-gradient(135deg,#2563EB,#1D4ED8)' : '#1a1d2e', border:'none', borderRadius:8, color: user && txt.trim() ? '#fff' : '#374151', fontWeight:700, fontSize:11, cursor: user && txt.trim() ? 'pointer' : 'not-allowed' }
+        }, '▶')
+      )
+    )
+  );
+}
+
+/* ════════════ RIGHT BETS PANEL ════════════ */
+function RightBetsPanel({ gameState, multiplier }) {
+  const [tab, setTab] = useState('all');
+  const betsRef = useRef(Array.from({ length: 14 }, mkBotWithTarget));
+  const [displayBets, setDisplayBets] = useState(() => betsRef.current.slice(0, 12));
+  const topBets = useRef(Array.from({ length: 10 }, () => ({
+    name: rn(), av: ra(),
+    bet: (Math.floor(Math.random() * 200) + 50) * 10,
+    mult: (10 + Math.random() * 140).toFixed(2)
+  })));
+  const gsRef = useRef(gameState);
+  const multRef = useRef(multiplier);
+  gsRef.current = gameState; multRef.current = multiplier;
+
+  useEffect(() => {
+    if (gameState === BETTING) {
+      betsRef.current = Array.from({ length: 14 }, mkBotWithTarget);
+      setDisplayBets(betsRef.current.slice(0, 12));
+      return;
+    }
+    if (gameState === CRASHED) {
+      betsRef.current = betsRef.current.map(x => x.cashout ? x : { ...x, lost: true });
+      setDisplayBets(betsRef.current.slice(0, 12));
+      return;
+    }
+  }, [gameState]);
+
+  useEffect(() => {
+    if (gameState !== FLYING) return;
+    const iv = setInterval(() => {
+      const m = multRef.current;
+      let changed = false;
+      betsRef.current = betsRef.current.map(bot => {
+        if (bot.cashout || bot.lost) return bot;
+        const reached = m >= bot.target;
+        const earlyChance = m > 1.3 ? 0.04 : 0;
+        if (reached || Math.random() < earlyChance) {
+          changed = true;
+          const co = parseFloat((Math.min(m, bot.target) + Math.random() * 0.05).toFixed(2));
+          return { ...bot, cashout: co };
+        }
+        return bot;
+      });
+      if (Math.random() < 0.12) {
+        const doneIdxs = betsRef.current.map((b, i) => b.cashout || b.lost ? i : -1).filter(i => i >= 0);
+        if (doneIdxs.length > 0) {
+          const ri = doneIdxs[Math.floor(Math.random() * doneIdxs.length)];
+          betsRef.current[ri] = { ...mkBotWithTarget(), cashout: null, lost: false };
+          changed = true;
+        }
+      }
+      if (changed) setDisplayBets([...betsRef.current.slice(0, 12)]);
+    }, 300);
+    return () => clearInterval(iv);
+  }, [gameState]);
+
+  const recentWinners = useRef(Array.from({ length: 5 }, () => ({
+    name: rn(), mult: (1.5 + Math.random() * 8).toFixed(2),
+    win: Math.floor(Math.random() * 2000 + 200)
+  })));
+
+  return React.createElement('div', {
+    style: { display:'flex', flexDirection:'column', height:'100%', background:'#0d0f1e' }
+  },
+    // Tabs
+    React.createElement('div', { style:{ display:'flex', borderBottom:'1px solid #1a1d2e', flexShrink:0 } },
+      [['all','All Bets'],['my','My Bets']].map(([k,l]) => React.createElement('button', {
+        key:k, onClick:()=>setTab(k),
+        style:{ flex:1, padding:'10px', background:'transparent', border:'none', color: tab===k?'#F97316':'#6B7280', fontSize:12, fontWeight:700, cursor:'pointer', borderBottom: tab===k?'2px solid #F97316':'2px solid transparent' }
+      }, l))
+    ),
+    // Column headers
+    React.createElement('div', {
+      style: { display:'grid', gridTemplateColumns:'1fr 90px 70px 80px', padding:'6px 10px', borderBottom:'1px solid #1a1d2e', flexShrink:0 }
+    }, ['Player','Bet (KES)','Cashout','Win (KES)'].map(h => React.createElement('div', {
+      key:h, style:{ fontSize:10, color:'#4B5563', fontWeight:600 }
+    }, h))),
+    // Bets list
+    React.createElement('div', { style:{ flex:1, overflowY:'auto' } },
+      displayBets.map(b => React.createElement('div', {
+        key:b.id,
+        style:{ display:'grid', gridTemplateColumns:'1fr 90px 70px 80px', padding:'6px 10px', borderBottom:'1px solid #0f1120', alignItems:'center' }
+      },
+        React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:6 } },
+          React.createElement('div', { style:{ width:22, height:22, borderRadius:'50%', background:'#1a1d2e', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10 } }, b.av),
+          React.createElement('span', { style:{ fontSize:11, color:'#9CA3AF' } }, b.name)
+        ),
+        React.createElement('div', { style:{ fontSize:11, fontWeight:600, color:'#D1D5DB' } }, b.bet.toLocaleString()),
+        React.createElement('div', { style:{ fontSize:11, fontWeight:700, color: b.cashout ? mColor(b.cashout) : b.lost ? '#EF4444' : '#374151' } },
+          b.cashout ? b.cashout.toFixed(2)+'x' : b.lost ? '-' : '…'
+        ),
+        React.createElement('div', { style:{ fontSize:11, fontWeight:700, color: b.cashout ? '#22C55E' : b.lost ? '#EF4444' : '#374151' } },
+          b.cashout ? (b.bet * b.cashout).toFixed(0) : b.lost ? '-'+b.bet : '—'
+        )
+      ))
+    ),
+    // Recent Winners
+    React.createElement('div', { style:{ borderTop:'1px solid #1a1d2e', flexShrink:0 } },
+      React.createElement('div', { style:{ padding:'8px 10px', fontSize:11, fontWeight:700, color:'#F97316', letterSpacing:1 } }, '🏆 Recent Winners'),
+      recentWinners.current.map((w,i) => React.createElement('div', {
+        key:i, style:{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'4px 10px', borderBottom:'1px solid #0f1120' }
+      },
+        React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:6 } },
+          React.createElement('span', { style:{ fontSize:14 } }, '🏆'),
+          React.createElement('span', { style:{ fontSize:11, color:'#D1D5DB', fontWeight:600 } }, w.name)
+        ),
+        React.createElement('span', { style:{ fontSize:11, color: mColor(parseFloat(w.mult)), fontWeight:700 } }, w.mult+'x'),
+        React.createElement('span', { style:{ fontSize:11, color:'#22C55E', fontWeight:700 } }, 'KES '+w.win.toLocaleString())
+      ))
+    )
+  );
+}
+
+/* ════════════ GAME (redesigned) ════════════ */
+function Game({ user, onLogout }) {
   const [balance, setBalance] = useState(user.balance || 0);
   const [showDeposit, setShowDeposit] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
@@ -3448,32 +3597,28 @@ function Game({
   const [muted, setMuted] = useState(false);
   const [gs, setGs] = useState(BETTING);
   const [mult, setMult] = useState(1.00);
-  const [history, setHistory] = useState([2.14, 1.43, 8.72, 1.07, 45.3, 3.21, 1.88, 2.66, 1.15, 12.4]);
+  const [history, setHistory] = useState([2.14,1.43,8.72,1.07,45.3,3.21,1.88,2.66,1.15,12.4]);
   const [cd, setCd] = useState(5);
+  const [startedAt, setStartedAt] = useState(null);
+  const [liveStats, setLiveStats] = useState({ totalBets: 56780, players: 163, online: 247 });
+  const [activeTab, setActiveTab] = useState('game'); // game | leaderboard | affiliates | rewards | help
 
-  // Persist balance changes to localStorage
   useEffect(() => {
     const users = loadUsers();
     const idx = users.findIndex(u => u.phone === user.phone);
-    if (idx >= 0) {
-      users[idx].balance = balance;
-      saveUsers(users);
-    }
+    if (idx >= 0) { users[idx].balance = balance; saveUsers(users); }
   }, [balance]);
+
   const prevGsRef = useRef(null);
   const prevCdRef = useRef(null);
   const engineTickRef = useRef(null);
+
   useEffect(() => {
     socket.on('connect', () => setConnected(true));
-    socket.on('seed:reveal', data => setLastSeed({
-      seed: data.serverSeed,
-      hash: data.serverHash,
-      crashPoint: data.crashPoint
-    }));
+    socket.on('seed:reveal', data => setLastSeed({ seed:data.serverSeed, hash:data.serverHash, crashPoint:data.crashPoint }));
     socket.on('disconnect', () => setConnected(false));
     socket.on('state', data => {
       const prev = prevGsRef.current;
-      // Sound triggers on phase changes
       if (prev === BETTING && data.phase === FLYING) {
         if (!window.__muted) playRoundStart();
         scheduleBotChat('flying');
@@ -3481,19 +3626,12 @@ function Game({
       if (prev === FLYING && data.phase === CRASHED) {
         if (!window.__muted) playCrash();
         scheduleBotChat('crashed');
-        if (engineTickRef.current) {
-          clearInterval(engineTickRef.current);
-          engineTickRef.current = null;
-        }
+        if (engineTickRef.current) { clearInterval(engineTickRef.current); engineTickRef.current = null; }
       }
       if (prev === CRASHED && data.phase === BETTING) {
-        if (engineTickRef.current) {
-          clearInterval(engineTickRef.current);
-          engineTickRef.current = null;
-        }
+        if (engineTickRef.current) { clearInterval(engineTickRef.current); engineTickRef.current = null; }
         scheduleBotChat('betting');
       }
-      // Engine sound while flying
       if (data.phase === FLYING && prev === FLYING) {
         if (!engineTickRef.current) {
           engineTickRef.current = setInterval(() => {
@@ -3501,7 +3639,6 @@ function Game({
           }, 500);
         }
       }
-      // Countdown tick in last 3 seconds
       if (data.phase === BETTING && data.countdown <= 3 && data.countdown > 0) {
         const prevCd = prevCdRef.current;
         if (prevCd !== null && Math.floor(prevCd) !== Math.floor(data.countdown)) {
@@ -3515,297 +3652,183 @@ function Game({
       setHistory(data.history);
       setCd(data.countdown);
       if (data.serverHash) setServerHash(data.serverHash);
-      if (data.serverHash) setServerHash(data.serverHash);
+      if (data.startedAt) setStartedAt(data.startedAt);
+      if (data.phase === 'betting') setStartedAt(null);
     });
     return () => {
-      socket.off('connect');
-      socket.off('disconnect');
-      socket.off('state');
-      socket.off('seed:reveal');
+      socket.off('connect'); socket.off('disconnect'); socket.off('state'); socket.off('seed:reveal');
       if (engineTickRef.current) clearInterval(engineTickRef.current);
     };
   }, []);
+
   function handleWin(amount, m) {
-    setWinCelebration({
-      amount,
-      multiplier: m,
-      id: Date.now()
-    });
+    setWinCelebration({ amount, multiplier: m, id: Date.now() });
   }
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      minHeight: '100vh',
-      background: '#0d0d1a',
-      display: 'flex',
-      flexDirection: 'column',
-      width: '100%',
-      position: 'relative'
-    }
-  }, winCelebration && /*#__PURE__*/React.createElement(WinCelebration, {
-    key: winCelebration.id,
-    amount: winCelebration.amount,
-    multiplier: winCelebration.multiplier,
-    onDone: () => setWinCelebration(null)
-  }), /*#__PURE__*/React.createElement(ChatPanel, {
-    user: user,
-    socket: socket
-  }), /*#__PURE__*/React.createElement(InstallBanner, null), showDeposit && /*#__PURE__*/React.createElement(DepositModal, {
-    balance: balance,
-    setBalance: setBalance,
-    onClose: () => setShowDeposit(false)
-  }), showWithdraw && /*#__PURE__*/React.createElement(WithdrawModal, {
-    balance: balance,
-    setBalance: setBalance,
-    user: user,
-    onClose: () => setShowWithdraw(false)
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: 'linear-gradient(90deg,#08080f,#0f0f1e,#08080f)',
-      borderBottom: '2px solid #EF444433',
-      flexShrink: 0,
-      padding: '0 12px'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '8px 0 6px'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 8
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: 'linear-gradient(135deg,#EF4444,#B91C1C)',
-      borderRadius: 8,
-      padding: '5px 12px',
-      fontWeight: 900,
-      fontSize: 'clamp(11px,4vw,16px)',
-      letterSpacing: 2,
-      color: '#fff',
-      display: 'flex',
-      alignItems: 'center',
-      gap: 5,
-      boxShadow: '0 0 18px rgba(239,68,68,0.4)'
-    }
-  }, "✈ MBOGI ANGANI"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 4
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: 6,
-      height: 6,
-      background: connected ? '#4ADE80' : '#EF4444',
-      borderRadius: '50%',
-      animation: 'pulse 2s infinite'
-    }
-  }), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 8,
-      color: connected ? '#4ADE80' : '#EF4444',
-      fontWeight: 700,
-      letterSpacing: 1
-    }
-  }, connected ? 'LIVE' : '...')), /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      window.__muted = !window.__muted;
-      setMuted(window.__muted);
+
+  const navTabs = [
+    { k:'game', icon:'🚀', l:'Aviator' },
+    { k:'leaderboard', icon:'🏆', l:'Leaderboard' },
+    { k:'affiliates', icon:'👥', l:'Affiliates' },
+    { k:'rewards', icon:'🎁', l:'Rewards' },
+    { k:'help', icon:'❓', l:'Help' },
+  ];
+
+  return React.createElement('div', { className:'app-layout' },
+    winCelebration && React.createElement(WinCelebration, { key:winCelebration.id, amount:winCelebration.amount, multiplier:winCelebration.multiplier, onDone:()=>setWinCelebration(null) }),
+    showDeposit && React.createElement(DepositModal, { balance, setBalance, onClose:()=>setShowDeposit(false) }),
+    showWithdraw && React.createElement(WithdrawModal, { balance, setBalance, user, onClose:()=>setShowWithdraw(false) }),
+    React.createElement(InstallBanner),
+
+    // ── TOP NAV BAR ──
+    React.createElement('div', {
+      style:{ background:'#080a15', borderBottom:'1px solid #1a1d2e', flexShrink:0, padding:'0 16px', display:'flex', alignItems:'center', justifyContent:'space-between', minHeight:52 }
     },
-    style: {
-      background: 'transparent',
-      border: 'none',
-      cursor: 'pointer',
-      fontSize: 14,
-      padding: '2px 4px',
-      opacity: 0.7
-    },
-    title: muted ? 'Unmute' : 'Mute'
-  }, muted ? '🔇' : '🔊')), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 10
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: 'right'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 8,
-      color: '#4B5563',
-      letterSpacing: 1
-    }
-  }, "BALANCE"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 14,
-      fontWeight: 800,
-      color: '#4ADE80'
-    }
-  }, "KES ", balance.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 6,
-      background: '#111827',
-      border: '1px solid #1f2937',
-      borderRadius: 9,
-      padding: '4px 10px'
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 16
-    }
-  }, "👤"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11,
-      fontWeight: 700,
-      color: '#F9FAFB'
-    }
-  }, user.username), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 8,
-      color: '#4B5563'
-    }
-  }, user.phone)), /*#__PURE__*/React.createElement("button", {
-    onClick: onLogout,
-    title: "Log out",
-    style: {
-      background: '#1f2937',
-      border: 'none',
-      color: '#6B7280',
-      borderRadius: 5,
-      padding: '2px 6px',
-      cursor: 'pointer',
-      fontSize: 9,
-      fontWeight: 700,
-      marginLeft: 2
-    }
-  }, "LOGOUT")))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 10,
-      padding: '4px 0 8px'
-    }
-  }, /*#__PURE__*/React.createElement(ReferralWidget, {
-    user: user
-  }), /*#__PURE__*/React.createElement(RGWidget, {
-    user: user
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      gap: 8,
-      paddingBottom: 8
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => setShowDeposit(true),
-    style: {
-      flex: 1,
-      padding: '8px 0',
-      background: 'linear-gradient(135deg,#16A34A,#15803D)',
-      border: 'none',
-      borderRadius: 8,
-      color: '#fff',
-      fontWeight: 800,
-      fontSize: 11,
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      boxShadow: '0 2px 10px rgba(22,163,74,0.35)',
-      letterSpacing: .5
-    }
-  }, /*#__PURE__*/React.createElement("svg", {
-    width: "14",
-    height: "14",
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "#fff",
-    strokeWidth: "2.5",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M12 5v14M5 12l7-7 7 7"
-  })), "DEPOSIT"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setShowWithdraw(true),
-    style: {
-      flex: 1,
-      padding: '8px 0',
-      background: 'linear-gradient(135deg,#9333EA,#7C3AED)',
-      border: 'none',
-      borderRadius: 8,
-      color: '#fff',
-      fontWeight: 800,
-      fontSize: 11,
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      boxShadow: '0 2px 10px rgba(147,51,234,0.3)',
-      letterSpacing: .5
-    }
-  }, /*#__PURE__*/React.createElement("svg", {
-    width: "14",
-    height: "14",
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "#fff",
-    strokeWidth: "2.5",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M12 19V5M5 12l7 7 7-7"
-  })), "WITHDRAW"))), /*#__PURE__*/React.createElement(HistoryBar, {
-    history: history
-  }), /*#__PURE__*/React.createElement(GameCanvas, {
-    gameState: gs,
-    multiplier: mult
-  }), gs === BETTING && /*#__PURE__*/React.createElement(Countdown, {
-    val: cd,
-    max: 5
-  }), /*#__PURE__*/React.createElement("div", {
-    className: "bet-row",
-    style: {
-      display: 'flex',
-      gap: 10,
-      padding: '8px max(8px,2vw) 6px'
-    }
-  }, /*#__PURE__*/React.createElement(BetPanel, {
-    gameState: gs,
-    balance: balance,
-    setBalance: setBalance,
-    multiplier: mult,
-    onWin: handleWin
-  }), /*#__PURE__*/React.createElement(BetPanel, {
-    gameState: gs,
-    balance: balance,
-    setBalance: setBalance,
-    multiplier: mult,
-    onWin: handleWin
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '0 max(8px,2vw) 16px'
-    }
-  }, /*#__PURE__*/React.createElement(LivePanel, {
-    gameState: gs,
-    multiplier: mult
-  })));
+      // Logo
+      React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:8 } },
+        React.createElement('div', { style:{ background:'linear-gradient(135deg,#EF4444,#B91C1C)', borderRadius:8, padding:'5px 12px', fontWeight:900, fontSize:'clamp(11px,3vw,15px)', letterSpacing:2, color:'#fff', display:'flex', alignItems:'center', gap:6, boxShadow:'0 0 18px rgba(239,68,68,0.4)' } },
+          React.createElement('span', { style:{fontSize:18} }, '✈'),
+          React.createElement('span', null, 'MBOGI ANGANI')
+        ),
+        React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:4 } },
+          React.createElement('div', { style:{ width:7, height:7, background: connected ? '#22C55E' : '#EF4444', borderRadius:'50%', animation:'pulse 2s infinite' } }),
+          React.createElement('span', { style:{ fontSize:9, color: connected ? '#22C55E' : '#EF4444', fontWeight:700, letterSpacing:1 } }, connected ? 'LIVE' : '...')
+        )
+      ),
+      // Nav tabs (desktop)
+      React.createElement('div', { style:{ display:'flex', gap:2, alignItems:'center' } },
+        navTabs.map(t => React.createElement('button', {
+          key:t.k, onClick:()=>setActiveTab(t.k),
+          style:{ padding:'8px 14px', background:'transparent', border:'none', color: activeTab===t.k?'#F97316':'#9CA3AF', fontSize:12, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:5, borderBottom: activeTab===t.k?'2px solid #F97316':'2px solid transparent', transition:'color 0.2s' }
+        }, React.createElement('span',null,t.icon), React.createElement('span',null,t.l)))
+      ),
+      // Right: balance + user
+      React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:10 } },
+        // Balance
+        React.createElement('div', {
+          style:{ background:'#1a1d2e', border:'1px solid #2d3148', borderRadius:10, padding:'6px 12px', display:'flex', alignItems:'center', gap:8 }
+        },
+          React.createElement('span', { style:{ fontSize:13, fontWeight:800, color:'#22C55E' } }, 'KES '+balance.toLocaleString()),
+          React.createElement('button', {
+            onClick:()=>setShowDeposit(true),
+            style:{ background:'linear-gradient(135deg,#22C55E,#16A34A)', border:'none', borderRadius:6, width:22, height:22, color:'#fff', fontSize:16, lineHeight:1, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900 }
+          }, '+')
+        ),
+        // Notifications
+        React.createElement('div', { style:{ position:'relative', cursor:'pointer' } },
+          React.createElement('span', { style:{fontSize:20} }, '🔔'),
+          React.createElement('div', { style:{ position:'absolute', top:-3, right:-3, background:'#EF4444', borderRadius:'50%', width:14, height:14, fontSize:8, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, color:'#fff' } }, '3')
+        ),
+        // User avatar
+        React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:8, background:'#1a1d2e', border:'1px solid #2d3148', borderRadius:10, padding:'5px 12px', cursor:'pointer' } },
+          React.createElement('div', { style:{ width:28, height:28, borderRadius:'50%', background:'linear-gradient(135deg,#EF4444,#9333EA)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:900 } }, user.username[0]),
+          React.createElement('div', null,
+            React.createElement('div', { style:{ fontSize:12, fontWeight:700, color:'#F1F5F9' } }, user.username),
+            React.createElement('div', { style:{ fontSize:9, color:'#4B5563' } }, 'Level 12')
+          ),
+          React.createElement('button', { onClick:onLogout, style:{ background:'none', border:'none', color:'#4B5563', cursor:'pointer', fontSize:11 } }, '▼')
+        ),
+        // Mute
+        React.createElement('button', {
+          onClick:()=>{ window.__muted=!window.__muted; setMuted(window.__muted); },
+          style:{ background:'transparent', border:'none', cursor:'pointer', fontSize:16, opacity:0.7 }
+        }, muted ? '🔇' : '🔊')
+      )
+    ),
+
+    // ── MAIN BODY ──
+    React.createElement('div', { className:'main-content' },
+
+      // LEFT: Chat
+      React.createElement('div', { className:'left-panel' },
+        React.createElement(LeftChatPanel, { user, socket })
+      ),
+
+      // CENTER: Game
+      React.createElement('div', { className:'center-panel' },
+        // History bar
+        React.createElement(HistoryBar, { history }),
+        // Canvas
+        React.createElement(GameCanvas, { gameState:gs, multiplier:mult, serverStartedAt:startedAt }),
+        // Countdown
+        gs === BETTING && React.createElement(Countdown, { val:cd, max:5 }),
+        // Bet controls
+        React.createElement('div', { style:{ padding:'10px 12px', background:'#080a15', borderTop:'1px solid #1a1d2e' } },
+          // Manual / Auto tabs
+          React.createElement('div', { style:{ display:'flex', background:'#1a1d2e', borderRadius:8, padding:3, marginBottom:10, width:'fit-content' } },
+            ['Manual','Auto'].map(t => React.createElement('button', {
+              key:t,
+              style:{ padding:'5px 18px', borderRadius:6, border:'none', background: t==='Manual'?'#2d3148':'transparent', color: t==='Manual'?'#fff':'#6B7280', fontSize:12, fontWeight:700, cursor:'pointer' }
+            }, t))
+          ),
+          // Two bet panels
+          React.createElement('div', { style:{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 } },
+            React.createElement(BetPanel, { gameState:gs, balance, setBalance, multiplier:mult, onWin:handleWin }),
+            React.createElement(BetPanel, { gameState:gs, balance, setBalance, multiplier:mult, onWin:handleWin })
+          )
+        ),
+        // Live stats bar
+        React.createElement('div', { style:{ background:'#0d0f1e', borderTop:'1px solid #1a1d2e', padding:'8px 16px', display:'flex', gap:20, alignItems:'center', flexShrink:0 } },
+          React.createElement('div', { style:{ display:'flex', gap:6, alignItems:'center' } },
+            React.createElement('span', { style:{fontSize:16} }, '💰'),
+            React.createElement('div', null,
+              React.createElement('div', { style:{ fontSize:9, color:'#4B5563', letterSpacing:1 } }, 'TOTAL BETS'),
+              React.createElement('div', { style:{ fontSize:13, fontWeight:800, color:'#F1F5F9' } }, 'KES 56,780.50')
+            )
+          ),
+          React.createElement('div', { style:{ display:'flex', gap:6, alignItems:'center' } },
+            React.createElement('span', { style:{fontSize:16} }, '👥'),
+            React.createElement('div', null,
+              React.createElement('div', { style:{ fontSize:9, color:'#4B5563', letterSpacing:1 } }, 'TOTAL PLAYERS'),
+              React.createElement('div', { style:{ fontSize:13, fontWeight:800, color:'#F1F5F9' } }, '163')
+            )
+          ),
+          React.createElement('div', { style:{ display:'flex', gap:8, marginLeft:'auto' } },
+            React.createElement(ReferralWidget, { user }),
+            React.createElement(RGWidget, { user }),
+            React.createElement(ProvenFair, { serverHash, lastSeed })
+          )
+        )
+      ),
+
+      // RIGHT: Bets + Stats
+      React.createElement('div', { className:'right-panel' },
+        React.createElement('div', { style:{ padding:'10px 14px', borderBottom:'1px solid #1a1d2e', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 } },
+          React.createElement('div', { style:{ fontSize:11, fontWeight:800, color:'#F97316' } }, '📊 Live Stats'),
+          React.createElement('div', { style:{ fontSize:10, color:'#22C55E', fontWeight:700 } }, '● 247 Online')
+        ),
+        React.createElement('div', { style:{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:1, borderBottom:'1px solid #1a1d2e', flexShrink:0 } },
+          [['👥','Online Players','247'],['🎮','Active Games','71'],['💰','Total Bets Today','KES 356K'],['🏆','Total Payouts','KES 289K']].map(([icon,label,val]) =>
+            React.createElement('div', { key:label, style:{ padding:'8px 10px', background:'#080a15', borderRight:'1px solid #1a1d2e', borderBottom:'1px solid #1a1d2e' } },
+              React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:5 } },
+                React.createElement('span',null,icon),
+                React.createElement('div', null,
+                  React.createElement('div', { style:{ fontSize:8, color:'#4B5563', letterSpacing:0.5 } }, label),
+                  React.createElement('div', { style:{ fontSize:11, fontWeight:800, color: val.includes('KES')?'#22C55E':'#F1F5F9' } }, val)
+                )
+              )
+            )
+          )
+        ),
+        React.createElement('div', { style:{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' } },
+          React.createElement(RightBetsPanel, { gameState:gs, multiplier:mult })
+        ),
+        // Deposit/Withdraw buttons at bottom
+        React.createElement('div', { style:{ display:'flex', gap:8, padding:'10px 12px', borderTop:'1px solid #1a1d2e', flexShrink:0, background:'#080a15' } },
+          React.createElement('button', {
+            onClick:()=>setShowDeposit(true),
+            style:{ flex:1, padding:'10px 0', background:'linear-gradient(135deg,#16A34A,#15803D)', border:'none', borderRadius:8, color:'#fff', fontWeight:800, fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:5, boxShadow:'0 2px 10px rgba(22,163,74,0.3)' }
+          }, '↑ DEPOSIT'),
+          React.createElement('button', {
+            onClick:()=>setShowWithdraw(true),
+            style:{ flex:1, padding:'10px 0', background:'linear-gradient(135deg,#9333EA,#7C3AED)', border:'none', borderRadius:8, color:'#fff', fontWeight:800, fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:5, boxShadow:'0 2px 10px rgba(147,51,234,0.25)' }
+          }, '↓ WITHDRAW')
+        )
+      )
+    )
+  );
 }
 
-/* ════════════════════════════════════════
-   APP ROOT — orchestrates all screens
-════════════════════════════════════════ */
+
 function App() {
   const [user, setUser] = useState(() => loadSession());
   const [authModal, setAuthModal] = useState(null); // null | 'login' | 'register'
@@ -4043,7 +4066,8 @@ function App() {
     history: bgHistory
   }), /*#__PURE__*/React.createElement(GameCanvas, {
     gameState: bgGs,
-    multiplier: bgMult
+    multiplier: bgMult,
+    serverStartedAt: null
   }), bgGs === BETTING && /*#__PURE__*/React.createElement(Countdown, {
     val: bgCd,
     max: 5
@@ -4061,10 +4085,10 @@ function App() {
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 }
-let _deferredInstall = null;
+window._deferredInstall = null;
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
-  _deferredInstall = e;
+  window._deferredInstall = e;
   window.__pwaReady = true;
   // Notify React
   window.dispatchEvent(new Event('pwa-ready'));

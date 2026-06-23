@@ -7,27 +7,46 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="Mbogi Angani"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Mbogi Angani</title>
+<title>Mbogi Angani — Aviator</title>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;background:radial-gradient(ellipse at center,#0a0e1a 0%,#060810 60%,#020305 100%);color:#fff;font-family:'Segoe UI',sans-serif;overflow-x:hidden;display:flex;justify-content:center;}
-#root{width:100%;max-width:640px;}
+html,body{height:100%;background:#0d0f1e;color:#fff;font-family:'Segoe UI',system-ui,sans-serif;overflow-x:hidden;}
+#root{width:100%;min-height:100vh;}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:#111}::-webkit-scrollbar-thumb{background:#444;border-radius:2px}
 input[type=number]{-moz-appearance:textfield}
 input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-@keyframes fadeIn{from{opacity:0;transform:scale(0.8)}to{opacity:1;transform:scale(1)}}
+@keyframes fadeIn{from{opacity:0;transform:scale(0.9)}to{opacity:1;transform:scale(1)}}
 @keyframes slideIn{from{transform:translateX(-20px);opacity:0}to{transform:translateX(0);opacity:1}}
-@keyframes glow{0%,100%{text-shadow:0 0 20px rgba(239,68,68,0.5)}50%{text-shadow:0 0 40px rgba(239,68,68,0.9),0 0 60px rgba(249,115,22,0.4)}}
+@keyframes slideUp{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes glow{0%,100%{text-shadow:0 0 20px rgba(239,68,68,0.5)}50%{text-shadow:0 0 50px rgba(239,68,68,1),0 0 80px rgba(249,115,22,0.5)}}
 @keyframes winPop{0%{transform:translate(-50%,-50%) scale(0.3);opacity:0}40%{transform:translate(-50%,-50%) scale(1.15);opacity:1}70%{transform:translate(-50%,-50%) scale(0.95)}100%{transform:translate(-50%,-50%) scale(1);opacity:1}}
 @keyframes coinRain{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(120px) rotate(720deg);opacity:0}}
 @keyframes shimmer{0%,100%{background-position:200% center}50%{background-position:0% center}}
 @keyframes floatUp{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-60px);opacity:0}}
 @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
-@media(max-width:600px){
-  .bet-row{flex-direction:column!important}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes cashoutFloat{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-50px) scale(1.4)}}
+
+/* Layout */
+.app-layout{display:flex;flex-direction:column;min-height:100vh;}
+.main-content{display:flex;flex:1;gap:0;}
+.left-panel{width:300px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid #1a1d2e;}
+.center-panel{flex:1;display:flex;flex-direction:column;min-width:0;}
+.right-panel{width:340px;flex-shrink:0;border-left:1px solid #1a1d2e;display:flex;flex-direction:column;}
+
+@media(max-width:1100px){
+  .right-panel{width:280px;}
+  .left-panel{width:240px;}
+}
+@media(max-width:800px){
+  .main-content{flex-direction:column;}
+  .left-panel,.right-panel{width:100%;border:none;border-bottom:1px solid #1a1d2e;}
+  .left-panel{order:3;max-height:220px;}
+  .right-panel{order:2;}
+  .center-panel{order:1;}
 }
 </style>
 </head>

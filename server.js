@@ -328,7 +328,7 @@ function broadcast() {
     crashPoint: state.crashPoint, roundNum: state.roundNum,
     countdown: state.countdown, houseEdge: state.houseEdge,
     history: state.history, connectedPlayers: state.connectedPlayers,
-    serverHash: state.serverHash,
+    serverHash: state.serverHash, startedAt: state.startedAt,
   });
 }
 function stopAll() {
@@ -385,6 +385,7 @@ io.on('connection', (socket) => {
     phase:state.phase,multiplier:state.multiplier,crashPoint:state.crashPoint,
     roundNum:state.roundNum,countdown:state.countdown,houseEdge:state.houseEdge,
     history:state.history,connectedPlayers:state.connectedPlayers,serverHash:state.serverHash,
+    startedAt:state.startedAt,
   });
   // Send recent bot chat history on connect
   socket.emit('chat:history', chatLog.filter(m=>m.isBot).slice(-20));
