@@ -130,7 +130,7 @@ function _engineStart() {
   osc1.type='sawtooth'; osc1.frequency.value=55;
   osc2.type='sawtooth'; osc2.frequency.value=58.5;
   oscGain.gain.setValueAtTime(0,c.currentTime);
-  oscGain.gain.linearRampToValueAtTime(0.021,c.currentTime+1.2);
+  oscGain.gain.linearRampToValueAtTime(0.0095,c.currentTime+1.2);
   osc1.connect(oscGain); osc2.connect(oscGain); oscGain.connect(c.destination);
   osc1.start(); osc2.start();
   const buf=c.createBuffer(1,c.sampleRate*2,c.sampleRate);
@@ -140,12 +140,12 @@ function _engineStart() {
   const bp=c.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=160; bp.Q.value=1.4;
   const noiseGain=c.createGain();
   noiseGain.gain.setValueAtTime(0,c.currentTime);
-  noiseGain.gain.linearRampToValueAtTime(0.01,c.currentTime+1.8);
+  noiseGain.gain.linearRampToValueAtTime(0.0045,c.currentTime+1.8);
   noise.connect(bp); bp.connect(noiseGain); noiseGain.connect(c.destination); noise.start();
   const whistle=c.createOscillator(); const wGain=c.createGain();
   whistle.type='sine'; whistle.frequency.value=820;
   wGain.gain.setValueAtTime(0,c.currentTime);
-  wGain.gain.linearRampToValueAtTime(0.0035,c.currentTime+2.0);
+  wGain.gain.linearRampToValueAtTime(0.0016,c.currentTime+2.0);
   whistle.connect(wGain); wGain.connect(c.destination); whistle.start();
   _eng={osc1,osc2,oscGain,noise,noiseGain,whistle,wGain};
 }
@@ -162,10 +162,10 @@ function _engineUpdate(mult) {
   const f=55+Math.min(mult*11,240);
   _eng.osc1.frequency.setTargetAtTime(f,c.currentTime,0.3);
   _eng.osc2.frequency.setTargetAtTime(f+3.5,c.currentTime,0.3);
-  _eng.oscGain.gain.setTargetAtTime(0.016+Math.min(mult*0.002,0.025),c.currentTime,0.5);
+  _eng.oscGain.gain.setTargetAtTime(0.0072+Math.min(mult*0.0009,0.0113),c.currentTime,0.5);
   _eng.whistle.frequency.setTargetAtTime(820+Math.min(mult*18,600),c.currentTime,0.4);
-  _eng.wGain.gain.setTargetAtTime(0.0025+Math.min(mult*0.0005,0.0055),c.currentTime,0.5);
-  _eng.noiseGain.gain.setTargetAtTime(0.008+Math.min(mult*0.001,0.011),c.currentTime,0.6);
+  _eng.wGain.gain.setTargetAtTime(0.0011+Math.min(mult*0.00023,0.0025),c.currentTime,0.5);
+  _eng.noiseGain.gain.setTargetAtTime(0.0036+Math.min(mult*0.00045,0.005),c.currentTime,0.6);
 }
 
 // ── Round start: 3 ascending beeps then engine spool ──
@@ -1574,7 +1574,7 @@ function ChatSidebar({ user, socket }) {
     // Messages area — fixed, no scroll push
     React.createElement('div', {
       style: {
-        flex:1, overflowY:'hidden', padding:'4px 6px',
+        flex:1, minHeight:0, overflow:'hidden', padding:'4px 6px',
         display:'flex', flexDirection:'column', justifyContent:'flex-end', gap:3,
         maskImage:'linear-gradient(to bottom, transparent 0%, black 30%)',
         WebkitMaskImage:'linear-gradient(to bottom, transparent 0%, black 30%)'
@@ -3782,7 +3782,7 @@ function Game({
   },
     /*#__PURE__*/React.createElement("div", {
       className: "chat-col",
-      style: { width:'clamp(130px,36%,250px)', flexShrink:0, borderRight:'1px solid #1f2937', display:'flex', flexDirection:'column', minHeight:210, maxHeight:290 }
+      style: { width:'clamp(130px,36%,250px)', flexShrink:0, borderRight:'1px solid #1f2937', display:'flex', flexDirection:'column', height:214, maxHeight:214, overflow:'hidden' }
     },
       /*#__PURE__*/React.createElement("div", {
         style:{ padding:'6px 10px', borderBottom:'1px solid #1f2937', fontSize:10, fontWeight:800, color:'#F97316', display:'flex', alignItems:'center', gap:5, flexShrink:0 }
