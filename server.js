@@ -548,7 +548,10 @@ app.post('/api/referral/create', async (req,res)=>{
       code=phone.slice(-4)+Math.random().toString(36).slice(2,6).toUpperCase();
       await pool.query('INSERT INTO referrals(code,owner_phone,bonus) VALUES($1,$2,$3)',[code,phone,20]);
     }
-    res.json({ok:true,code,link:`${req.protocol}://${req.get('host')}?ref=${code}`});
+    const host = req.get('host');
+    const proto = req.get('x-forwarded-proto') || req.protocol;
+    const baseUrl = proto.includes('https') ? `https://${host}` : `http://${host}`;
+    res.json({ok:true,code,link:`${baseUrl}?ref=${code}`});
   } catch(e){res.json({ok:false});}
 });
 
