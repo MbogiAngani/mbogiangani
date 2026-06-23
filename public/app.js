@@ -76,93 +76,181 @@ function getACtx() {
       actx = new AudioCtx();
     } catch (e) {}
   }
+  if (actx && actx.state === 'suspended') actx.resume();
   return actx;
 }
-function playTone(freq, type, duration, vol = 0.15, fadeIn = 0, rampDown = true) {
+
+// ── Jet engine loop ──
+let engineOsc = null,
+  engineGain = null,
+  engineNoise = null,
+  engineNoiseGain = null;
+function startEngine() {
   const ctx = getACtx();
   if (!ctx) return;
-  try {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, ctx.currentTime);
-    gain.gain.setValueAtTime(fadeIn ? 0 : vol, ctx.currentTime);
-    if (fadeIn) gain.gain.linearRampToValueAtTime(vol, ctx.currentTime + fadeIn);
-    if (rampDown) gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + duration);
-  } catch (e) {}
+  stopEngine();
+  // Low rumble oscillator
+  engineOsc = ctx.createOscillator();
+  engineGain = ctx.createGain();
+  engineOsc.type = 'sawtooth';
+  engineOsc.frequency.setValueAtTime(48, ctx.currentTime);
+  engineGain.gain.setValueAtTime(0, ctx.currentTime);
+  engineGain.gain.linearRampToValueAtTime(0.07, ctx.currentTime + 0.8);
+  engineOsc.connect(engineGain);
+  engineGain.connect(ctx.destination);
+  engineOsc.start();
+  // White noise layer for wind/turbine texture
+  const bufSize = ctx.sampleRate * 2;
+  const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) d[i] = Math.random() * 2 - 1;
+  engineNoise = ctx.createBufferSource();
+  engineNoise.buffer = buf;
+  engineNoise.loop = true;
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = 180;
+  filter.Q.value = 0.8;
+  engineNoiseGain = ctx.createGain();
+  engineNoiseGain.gain.setValueAtTime(0, ctx.currentTime);
+  engineNoiseGain.gain.linearRampToValueAtTime(0.04, ctx.currentTime + 1);
+  engineNoise.connect(filter);
+  filter.connect(engineNoiseGain);
+  engineNoiseGain.connect(ctx.destination);
+  engineNoise.start();
 }
-function playEngine(multiplier) {
+function updateEngine(multiplier) {
   const ctx = getACtx();
-  if (!ctx) return;
-  try {
-    const base = 55 + Math.min(multiplier * 14, 220);
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(base, ctx.currentTime);
-    gain.gain.setValueAtTime(0.04, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.12);
-  } catch (e) {}
+  if (!ctx || !engineOsc) return;
+  // Pitch rises with multiplier — plane going faster
+  const freq = 48 + Math.min(multiplier * 8, 180);
+  engineOsc.frequency.setTargetAtTime(freq, ctx.currentTime, 0.3);
+  const vol = 0.05 + Math.min(multiplier * 0.008, 0.09);
+  engineGain.gain.setTargetAtTime(vol, ctx.currentTime, 0.5);
 }
+function stopEngine() {
+  try {
+    if (engineOsc) {
+      engineOsc.stop();
+      engineOsc = null;
+    }
+  } catch (e) {}
+  try {
+    if (engineNoise) {
+      engineNoise.stop();
+      engineNoise = null;
+    }
+  } catch (e) {}
+  engineGain = null;
+  engineNoiseGain = null;
+}
+
+// ── Crash explosion ──
 function playCrash() {
   const ctx = getACtx();
   if (!ctx) return;
-  try {
-    // Explosion: filtered noise burst
-    const buf = ctx.createBuffer(1, ctx.sampleRate * 0.6, ctx.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 1.5);
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = 800;
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.5, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
-    src.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
-    src.start();
-    // Descending whistle
-    const w = ctx.createOscillator();
-    const wg = ctx.createGain();
-    w.connect(wg);
-    wg.connect(ctx.destination);
-    w.type = 'sine';
-    w.frequency.setValueAtTime(600, ctx.currentTime);
-    w.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.5);
-    wg.gain.setValueAtTime(0.2, ctx.currentTime);
-    wg.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-    w.start();
-    w.stop(ctx.currentTime + 0.5);
-  } catch (e) {}
+  stopEngine();
+  // Noise burst
+  const bufSize = Math.floor(ctx.sampleRate * 1.2);
+  const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufSize, 0.4);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const lpf = ctx.createBiquadFilter();
+  lpf.type = 'lowpass';
+  lpf.frequency.value = 600;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.5, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2);
+  src.connect(lpf);
+  lpf.connect(g);
+  g.connect(ctx.destination);
+  src.start();
+  // Descending whine
+  const w = ctx.createOscillator();
+  const wg = ctx.createGain();
+  w.type = 'sawtooth';
+  w.frequency.setValueAtTime(520, ctx.currentTime);
+  w.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.8);
+  wg.gain.setValueAtTime(0.18, ctx.currentTime);
+  wg.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+  w.connect(wg);
+  wg.connect(ctx.destination);
+  w.start();
+  w.stop(ctx.currentTime + 0.8);
 }
-function playBet() {
-  playTone(440, 'sine', 0.12, 0.12, 0.01, true);
-}
+
+// ── Cashout chime — 3 ascending tones ──
 function playCashout(mult) {
-  // Rising chime — higher pitch for bigger multiplier
-  const freq = Math.min(300 + mult * 40, 1200);
-  playTone(freq, 'sine', 0.3, 0.18, 0.02, true);
-  setTimeout(() => playTone(freq * 1.25, 'sine', 0.25, 0.12, 0, true), 120);
-  setTimeout(() => playTone(freq * 1.5, 'sine', 0.2, 0.08, 0, true), 240);
+  const ctx = getACtx();
+  if (!ctx) return;
+  const base = Math.min(440 + mult * 30, 1400);
+  [[base, 0], [base * 1.26, 0.1], [base * 1.5, 0.22]].forEach(([freq, delay]) => {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(0, ctx.currentTime + delay);
+    g.gain.linearRampToValueAtTime(0.15, ctx.currentTime + delay + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.35);
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.start(ctx.currentTime + delay);
+    o.stop(ctx.currentTime + delay + 0.4);
+  });
 }
-function playCountdownTick() {
-  playTone(220, 'square', 0.06, 0.06);
+
+// ── Bet placed click ──
+function playBet() {
+  const ctx = getACtx();
+  if (!ctx) return;
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(600, ctx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.08);
+  g.gain.setValueAtTime(0.12, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+  o.connect(g);
+  g.connect(ctx.destination);
+  o.start();
+  o.stop(ctx.currentTime + 0.12);
 }
+
+// ── Round start whoosh ──
 function playRoundStart() {
-  playTone(330, 'sine', 0.15, 0.15, 0.01, true);
-  setTimeout(() => playTone(440, 'sine', 0.2, 0.12, 0, true), 100);
-  setTimeout(() => playTone(550, 'sine', 0.25, 0.1, 0, true), 200);
+  const ctx = getACtx();
+  if (!ctx) return;
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = 'sawtooth';
+  o.frequency.setValueAtTime(80, ctx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(220, ctx.currentTime + 0.4);
+  g.gain.setValueAtTime(0, ctx.currentTime);
+  g.gain.linearRampToValueAtTime(0.1, ctx.currentTime + 0.1);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+  o.connect(g);
+  g.connect(ctx.destination);
+  o.start();
+  o.stop(ctx.currentTime + 0.5);
+  startEngine();
+}
+
+// ── Countdown tick ──
+function playCountdownTick() {
+  const ctx = getACtx();
+  if (!ctx) return;
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = 'square';
+  o.frequency.value = 300;
+  g.gain.setValueAtTime(0.06, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+  o.connect(g);
+  g.connect(ctx.destination);
+  o.start();
+  o.stop(ctx.currentTime + 0.07);
 }
 
 /* ════════════ AUTH WALL ════════════ */
@@ -2583,35 +2671,44 @@ function ChatPanel({
     style: {
       position: 'fixed',
       bottom: 72,
-      right: 12,
-      width: 46,
-      height: 46,
-      borderRadius: '50%',
-      background: 'linear-gradient(135deg,#2563EB,#1D4ED8)',
+      right: 0,
+      background: 'linear-gradient(135deg,#1D4ED8,#1e3a8a)',
       border: 'none',
+      borderTopLeftRadius: 20,
+      borderBottomLeftRadius: 20,
       cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: 20,
-      boxShadow: '0 4px 16px rgba(37,99,235,0.5)',
+      gap: 6,
+      padding: '8px 12px 8px 10px',
+      boxShadow: '-2px 2px 16px rgba(37,99,235,0.5)',
       zIndex: 500
     }
-  }, "💬", unread > 0 && /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement("span", {
     style: {
-      position: 'absolute',
-      top: -4,
-      right: -4,
+      fontSize: 16
+    }
+  }, "💬"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 10,
+      fontWeight: 800,
+      color: '#fff',
+      letterSpacing: .5,
+      whiteSpace: 'nowrap'
+    }
+  }, "Live Chat"), unread > 0 && /*#__PURE__*/React.createElement("span", {
+    style: {
       background: '#EF4444',
       borderRadius: '50%',
-      width: 16,
+      minWidth: 16,
       height: 16,
       fontSize: 9,
       fontWeight: 900,
       color: '#fff',
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'center'
+      justifyContent: 'center',
+      padding: '0 3px'
     }
   }, unread)), open && /*#__PURE__*/React.createElement("div", {
     style: {
@@ -2791,10 +2888,28 @@ function ReferralWidget({
     }
   }, [open]);
   function copyLink() {
-    navigator.clipboard.writeText(link).then(() => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(link).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+      }).catch(() => fallbackCopy());
+    } else {
+      fallbackCopy();
+    }
+  }
+  function fallbackCopy() {
+    const el = document.createElement('textarea');
+    el.value = link;
+    el.style.position = 'fixed';
+    el.style.opacity = '0';
+    document.body.appendChild(el);
+    el.select();
+    try {
+      document.execCommand('copy');
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+      setTimeout(() => setCopied(false), 2500);
+    } catch (e) {}
+    document.body.removeChild(el);
   }
   if (!open) return /*#__PURE__*/React.createElement("button", {
     onClick: () => setOpen(true),
@@ -3292,6 +3407,7 @@ function Game({
         }
       }
       if (prev === CRASHED && data.phase === BETTING) {
+        stopEngine();
         if (engineTickRef.current) {
           clearInterval(engineTickRef.current);
           engineTickRef.current = null;
@@ -3301,8 +3417,8 @@ function Game({
       if (data.phase === FLYING && prev === FLYING) {
         if (!engineTickRef.current) {
           engineTickRef.current = setInterval(() => {
-            if (!window.__muted) playEngine(data.multiplier || 1);
-          }, 300);
+            if (!window.__muted) updateEngine(data.multiplier || 1);
+          }, 500);
         }
       }
       // Countdown tick in last 3 seconds
@@ -3353,19 +3469,7 @@ function Game({
   }), /*#__PURE__*/React.createElement(ChatPanel, {
     user: user,
     socket: socket
-  }), /*#__PURE__*/React.createElement(InstallBanner, null), /*#__PURE__*/React.createElement(InstallBanner, null), /*#__PURE__*/React.createElement(ChatPanel, {
-    user: user,
-    socket: socket,
-    gameState: gs,
-    multiplier: mult
-  }), /*#__PURE__*/React.createElement(ProvenFair, {
-    serverHash: serverHash,
-    lastSeed: lastSeed
-  }), /*#__PURE__*/React.createElement(ReferralWidget, {
-    user: user
-  }), /*#__PURE__*/React.createElement(RGWidget, {
-    user: user
-  }), showDeposit && /*#__PURE__*/React.createElement(DepositModal, {
+  }), /*#__PURE__*/React.createElement(InstallBanner, null), showDeposit && /*#__PURE__*/React.createElement(DepositModal, {
     balance: balance,
     setBalance: setBalance,
     onClose: () => setShowDeposit(false)
@@ -3506,44 +3610,13 @@ function Game({
     }
   }, "LOGOUT")))), /*#__PURE__*/React.createElement("div", {
     style: {
-      textAlign: 'center',
-      fontSize: 9,
-      color: '#4B5563',
-      paddingBottom: 4,
-      letterSpacing: .5
-    }
-  }, "Helpline: ", /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: '#4ADE80',
-      fontWeight: 700
-    }
-  }, "+254 738 425 134")), /*#__PURE__*/React.createElement("div", {
-    style: {
       display: 'flex',
+      alignItems: 'center',
       justifyContent: 'center',
-      gap: 6,
-      paddingBottom: 6,
-      flexWrap: 'wrap'
+      gap: 10,
+      padding: '4px 0 8px'
     }
-  }, /*#__PURE__*/React.createElement(ProvenFair, {
-    serverHash: serverHash,
-    lastSeed: lastSeed
-  }), /*#__PURE__*/React.createElement(ReferralWidget, {
-    user: user
-  }), /*#__PURE__*/React.createElement(RGWidget, {
-    user: user
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      justifyContent: 'center',
-      gap: 8,
-      paddingBottom: 6,
-      flexWrap: 'wrap'
-    }
-  }, /*#__PURE__*/React.createElement(ProvenFair, {
-    serverHash: serverHash,
-    lastSeed: lastSeed
-  }), /*#__PURE__*/React.createElement(ReferralWidget, {
+  }, /*#__PURE__*/React.createElement(ReferralWidget, {
     user: user
   }), /*#__PURE__*/React.createElement(RGWidget, {
     user: user
