@@ -2378,6 +2378,869 @@ function WithdrawModal({
 /* ════════════════════════════════════════
    MAIN GAME
 ════════════════════════════════════════ */
+
+/* ════════════ PROVABLY FAIR ════════════ */
+function ProvenFair({
+  serverHash,
+  lastSeed
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [checked, setChecked] = React.useState(null);
+  function verify() {
+    if (!lastSeed || !lastSeed.seed) return;
+    crypto.subtle.digest('SHA-256', new TextEncoder().encode(lastSeed.seed)).then(buf => {
+      const hex = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+      setChecked(hex === lastSeed.hash ? 'MATCH' : 'MISMATCH');
+    });
+  }
+  if (!open) return /*#__PURE__*/React.createElement("button", {
+    onClick: () => setOpen(true),
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 5,
+      background: 'transparent',
+      border: '1px solid #1e293b',
+      borderRadius: 20,
+      padding: '3px 10px',
+      color: '#4B5563',
+      fontSize: 9,
+      cursor: 'pointer',
+      fontWeight: 700,
+      letterSpacing: 1
+    }
+  }, "🔒 PROVABLY FAIR");
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'fixed',
+      inset: 0,
+      background: 'rgba(0,0,0,0.85)',
+      zIndex: 9999,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 16
+    },
+    onClick: () => setOpen(false)
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: e => e.stopPropagation(),
+    style: {
+      background: '#0f172a',
+      borderRadius: 16,
+      padding: 20,
+      width: '100%',
+      maxWidth: 360,
+      border: '1px solid #1e293b'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 900,
+      fontSize: 14,
+      color: '#4ADE80',
+      marginBottom: 4
+    }
+  }, "🔒 PROVABLY FAIR"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#4B5563',
+      marginBottom: 16,
+      lineHeight: 1.6
+    }
+  }, "Before each round we publish a SHA-256 hash of our server seed. After the round ends the seed is revealed so you can verify the crash point wasn't changed."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginBottom: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#4B5563',
+      fontWeight: 700,
+      letterSpacing: 1,
+      marginBottom: 4
+    }
+  }, "CURRENT ROUND HASH"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#1e293b',
+      borderRadius: 8,
+      padding: '8px 10px',
+      fontSize: 9,
+      color: '#60A5FA',
+      fontFamily: 'monospace',
+      wordBreak: 'break-all',
+      lineHeight: 1.6
+    }
+  }, serverHash || 'Loading...')), lastSeed && lastSeed.seed && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginBottom: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#4B5563',
+      fontWeight: 700,
+      letterSpacing: 1,
+      marginBottom: 4
+    }
+  }, "LAST ROUND SEED"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#1e293b',
+      borderRadius: 8,
+      padding: '8px 10px',
+      fontSize: 9,
+      color: '#C084FC',
+      fontFamily: 'monospace',
+      wordBreak: 'break-all',
+      lineHeight: 1.6
+    }
+  }, lastSeed.seed), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#4B5563',
+      marginTop: 4
+    }
+  }, "Crashed at: ", /*#__PURE__*/React.createElement("strong", {
+    style: {
+      color: '#F97316'
+    }
+  }, lastSeed.crashPoint, "x")), /*#__PURE__*/React.createElement("button", {
+    onClick: verify,
+    style: {
+      marginTop: 8,
+      padding: '6px 14px',
+      background: '#16A34A',
+      border: 'none',
+      borderRadius: 6,
+      color: '#fff',
+      fontSize: 10,
+      fontWeight: 700,
+      cursor: 'pointer'
+    }
+  }, "VERIFY NOW"), checked && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 6,
+      fontSize: 10,
+      fontWeight: 700,
+      color: checked === 'MATCH' ? '#4ADE80' : '#EF4444'
+    }
+  }, checked === 'MATCH' ? '✅ Hash matches — fair!' : '❌ Mismatch!')), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setOpen(false),
+    style: {
+      marginTop: 8,
+      width: '100%',
+      padding: '8px',
+      background: '#1e293b',
+      border: 'none',
+      borderRadius: 8,
+      color: '#64748B',
+      fontSize: 11,
+      fontWeight: 700,
+      cursor: 'pointer'
+    }
+  }, "CLOSE")));
+}
+
+/* ════════════ CHAT PANEL ════════════ */
+function ChatPanel({
+  user,
+  socket
+}) {
+  const [msgs, setMsgs] = React.useState([]);
+  const [txt, setTxt] = React.useState('');
+  const [open, setOpen] = React.useState(false);
+  const [unread, setUnread] = React.useState(0);
+  const bottomRef = React.useRef(null);
+  React.useEffect(() => {
+    socket.on('chat:history', data => setMsgs(data || []));
+    socket.on('chat', msg => {
+      setMsgs(m => [...m.slice(-59), msg]);
+      if (!open) setUnread(n => n + 1);
+    });
+    return () => {
+      socket.off('chat:history');
+      socket.off('chat');
+    };
+  }, [open]);
+  React.useEffect(() => {
+    if (open) {
+      setUnread(0);
+      setTimeout(() => bottomRef.current?.scrollIntoView({
+        behavior: 'smooth'
+      }), 100);
+    }
+  }, [open, msgs]);
+  function send() {
+    const t = txt.trim();
+    if (!t || !user) return;
+    socket.emit('chat:msg', {
+      username: user.username,
+      text: t
+    });
+    setTxt('');
+  }
+  const chatEmojis = ['🔥', '🚀', '💸', '😂', '😭', '🙏', '💀'];
+  return /*#__PURE__*/React.createElement(React.Fragment, null, !open && /*#__PURE__*/React.createElement("button", {
+    onClick: () => setOpen(true),
+    style: {
+      position: 'fixed',
+      bottom: 72,
+      right: 12,
+      width: 46,
+      height: 46,
+      borderRadius: '50%',
+      background: 'linear-gradient(135deg,#2563EB,#1D4ED8)',
+      border: 'none',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: 20,
+      boxShadow: '0 4px 16px rgba(37,99,235,0.5)',
+      zIndex: 500
+    }
+  }, "💬", unread > 0 && /*#__PURE__*/React.createElement("span", {
+    style: {
+      position: 'absolute',
+      top: -4,
+      right: -4,
+      background: '#EF4444',
+      borderRadius: '50%',
+      width: 16,
+      height: 16,
+      fontSize: 9,
+      fontWeight: 900,
+      color: '#fff',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }
+  }, unread)), open && /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'fixed',
+      bottom: 0,
+      right: 0,
+      width: 'min(100vw,340px)',
+      height: '65vh',
+      background: '#0d0d1a',
+      borderTop: '2px solid #1e293b',
+      borderLeft: '2px solid #1e293b',
+      borderTopLeftRadius: 16,
+      display: 'flex',
+      flexDirection: 'column',
+      zIndex: 600,
+      boxShadow: '-4px 0 30px rgba(0,0,0,0.7)'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '10px 14px',
+      borderBottom: '1px solid #1e293b',
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 800,
+      fontSize: 12,
+      color: '#F1F5F9',
+      letterSpacing: 1
+    }
+  }, "💬 LIVE CHAT"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setOpen(false),
+    style: {
+      background: 'transparent',
+      border: 'none',
+      color: '#4B5563',
+      cursor: 'pointer',
+      fontSize: 16,
+      lineHeight: 1
+    }
+  }, "✕")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      overflowY: 'auto',
+      padding: '8px 12px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 5
+    }
+  }, msgs.length === 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#374151',
+      textAlign: 'center',
+      marginTop: 20
+    }
+  }, "Hakuna messages bado..."), msgs.map(m => /*#__PURE__*/React.createElement("div", {
+    key: m.id,
+    style: {
+      display: 'flex',
+      gap: 6,
+      alignItems: 'flex-start'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 9,
+      fontWeight: 700,
+      color: '#C084FC',
+      whiteSpace: 'nowrap',
+      flexShrink: 0,
+      paddingTop: 1
+    }
+  }, m.username), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: '#CBD5E1',
+      lineHeight: 1.4,
+      wordBreak: 'break-word'
+    }
+  }, m.text))), /*#__PURE__*/React.createElement("div", {
+    ref: bottomRef
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '8px 10px',
+      borderTop: '1px solid #1e293b',
+      flexShrink: 0
+    }
+  }, user && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 8,
+      color: '#374151',
+      fontWeight: 700,
+      letterSpacing: .5,
+      marginBottom: 4,
+      textAlign: 'center'
+    }
+  }, "🔒 Your messages are private"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 5,
+      marginBottom: 5
+    }
+  }, chatEmojis.map(e => /*#__PURE__*/React.createElement("button", {
+    key: e,
+    onClick: () => setTxt(t => t + e),
+    style: {
+      background: 'transparent',
+      border: 'none',
+      fontSize: 15,
+      cursor: 'pointer',
+      padding: '1px'
+    }
+  }, e))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 6
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    value: txt,
+    onChange: e => setTxt(e.target.value),
+    onKeyDown: e => e.key === 'Enter' && send(),
+    placeholder: user ? 'Sema kitu... (private)' : 'Login to chat',
+    disabled: !user,
+    style: {
+      flex: 1,
+      background: '#1e293b',
+      border: '1px solid #334155',
+      borderRadius: 8,
+      padding: '7px 10px',
+      color: '#F1F5F9',
+      fontSize: 11,
+      outline: 'none'
+    }
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: send,
+    disabled: !user || !txt.trim(),
+    style: {
+      padding: '7px 12px',
+      background: user && txt.trim() ? 'linear-gradient(135deg,#2563EB,#1D4ED8)' : '#1e293b',
+      border: 'none',
+      borderRadius: 8,
+      color: user && txt.trim() ? '#fff' : '#374151',
+      fontWeight: 700,
+      fontSize: 11,
+      cursor: user && txt.trim() ? 'pointer' : 'not-allowed'
+    }
+  }, "SEND")))));
+}
+
+/* ════════════ REFERRAL WIDGET ════════════ */
+function ReferralWidget({
+  user
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [code, setCode] = React.useState('');
+  const [link, setLink] = React.useState('');
+  const [copied, setCopied] = React.useState(false);
+  React.useEffect(() => {
+    if (open && user && !code) {
+      fetch('/api/referral/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          phone: user.phone
+        })
+      }).then(r => r.json()).then(res => {
+        if (res.ok) {
+          setCode(res.code);
+          setLink(res.link);
+        }
+      });
+    }
+  }, [open]);
+  function copyLink() {
+    navigator.clipboard.writeText(link).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+  if (!open) return /*#__PURE__*/React.createElement("button", {
+    onClick: () => setOpen(true),
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 5,
+      background: 'transparent',
+      border: '1px solid #16A34A44',
+      borderRadius: 20,
+      padding: '3px 10px',
+      color: '#4ADE80',
+      fontSize: 9,
+      cursor: 'pointer',
+      fontWeight: 700,
+      letterSpacing: 1
+    }
+  }, "🎁 REFER & EARN");
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'fixed',
+      inset: 0,
+      background: 'rgba(0,0,0,0.85)',
+      zIndex: 9999,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 16
+    },
+    onClick: () => setOpen(false)
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: e => e.stopPropagation(),
+    style: {
+      background: '#0f172a',
+      borderRadius: 16,
+      padding: 20,
+      width: '100%',
+      maxWidth: 340,
+      border: '1px solid #16A34A44'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 900,
+      fontSize: 15,
+      color: '#4ADE80',
+      marginBottom: 4
+    }
+  }, "🎁 Refer & Earn KES 20"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#64748B',
+      marginBottom: 16,
+      lineHeight: 1.6
+    }
+  }, "Share your link. When a friend registers and plays, you both get ", /*#__PURE__*/React.createElement("strong", {
+    style: {
+      color: '#4ADE80'
+    }
+  }, "KES 20"), " added to your balance."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginBottom: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#4B5563',
+      fontWeight: 700,
+      letterSpacing: 1,
+      marginBottom: 4
+    }
+  }, "YOUR CODE"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: 'linear-gradient(135deg,#052e16,#0a1f0a)',
+      border: '2px solid #16A34A',
+      borderRadius: 10,
+      padding: '12px',
+      textAlign: 'center',
+      fontSize: 22,
+      fontWeight: 900,
+      color: '#4ADE80',
+      letterSpacing: 6,
+      fontFamily: 'monospace'
+    }
+  }, code || '...')), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginBottom: 14
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#4B5563',
+      fontWeight: 700,
+      letterSpacing: 1,
+      marginBottom: 4
+    }
+  }, "YOUR LINK"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#1e293b',
+      borderRadius: 8,
+      padding: '8px 10px',
+      fontSize: 10,
+      color: '#94A3B8',
+      fontFamily: 'monospace',
+      wordBreak: 'break-all'
+    }
+  }, link || '...')), /*#__PURE__*/React.createElement("button", {
+    onClick: copyLink,
+    style: {
+      width: '100%',
+      padding: '11px',
+      background: copied ? '#16A34A' : 'linear-gradient(135deg,#2563EB,#1D4ED8)',
+      border: 'none',
+      borderRadius: 10,
+      color: '#fff',
+      fontWeight: 800,
+      fontSize: 12,
+      cursor: 'pointer'
+    }
+  }, copied ? '✅ COPIED!' : '📋 COPY LINK'), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setOpen(false),
+    style: {
+      marginTop: 8,
+      width: '100%',
+      padding: '8px',
+      background: 'transparent',
+      border: 'none',
+      color: '#4B5563',
+      fontSize: 11,
+      cursor: 'pointer'
+    }
+  }, "CLOSE")));
+}
+
+/* ════════════ RESPONSIBLE GAMBLING ════════════ */
+function RGWidget({
+  user
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [limits, setLimits] = React.useState(null);
+  const [saving, setSaving] = React.useState(false);
+  const [depLimit, setDepLimit] = React.useState('2000');
+  const [lossLimit2, setLossLimit2] = React.useState('2000');
+  React.useEffect(() => {
+    if (open && user) {
+      fetch('/api/limits/' + encodeURIComponent(user.phone)).then(r => r.json()).then(res => {
+        if (res.ok) {
+          setLimits(res);
+          setDepLimit(String(res.depositLimit || 2000));
+          setLossLimit2(String(res.lossLimit || 2000));
+        }
+      });
+    }
+  }, [open]);
+  function save() {
+    setSaving(true);
+    fetch('/api/limits/set', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        phone: user.phone,
+        depositLimit: depLimit,
+        lossLimit: lossLimit2
+      })
+    }).then(r => r.json()).then(res => {
+      setLimits(res);
+      setSaving(false);
+      setTimeout(() => setOpen(false), 600);
+    });
+  }
+  if (!open) return /*#__PURE__*/React.createElement("button", {
+    onClick: () => setOpen(true),
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 5,
+      background: 'transparent',
+      border: '1px solid #33415544',
+      borderRadius: 20,
+      padding: '3px 10px',
+      color: '#64748B',
+      fontSize: 9,
+      cursor: 'pointer',
+      fontWeight: 700,
+      letterSpacing: 1
+    }
+  }, "🛡 PLAY SAFE");
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'fixed',
+      inset: 0,
+      background: 'rgba(0,0,0,0.85)',
+      zIndex: 9999,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 16
+    },
+    onClick: () => setOpen(false)
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: e => e.stopPropagation(),
+    style: {
+      background: '#0f172a',
+      borderRadius: 16,
+      padding: 20,
+      width: '100%',
+      maxWidth: 340,
+      border: '1px solid #334155'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 900,
+      fontSize: 14,
+      color: '#F1F5F9',
+      marginBottom: 4
+    }
+  }, "🛡 Responsible Gambling"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#4B5563',
+      marginBottom: 16,
+      lineHeight: 1.6
+    }
+  }, "Set daily limits to stay in control. Limits reset every midnight. Help: ", /*#__PURE__*/React.createElement("strong", {
+    style: {
+      color: '#4ADE80'
+    }
+  }, "+254 738 425 134")), limits && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 8,
+      marginBottom: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      background: '#1e293b',
+      borderRadius: 8,
+      padding: '8px 10px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 8,
+      color: '#4B5563',
+      fontWeight: 700,
+      letterSpacing: 1,
+      marginBottom: 2
+    }
+  }, "TODAY DEPOSITED"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 14,
+      fontWeight: 800,
+      color: '#60A5FA'
+    }
+  }, "KES ", (limits.dailyDeposit || 0).toLocaleString())), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      background: '#1e293b',
+      borderRadius: 8,
+      padding: '8px 10px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 8,
+      color: '#4B5563',
+      fontWeight: 700,
+      letterSpacing: 1,
+      marginBottom: 2
+    }
+  }, "TODAY LOST"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 14,
+      fontWeight: 800,
+      color: '#EF4444'
+    }
+  }, "KES ", (limits.dailyLoss || 0).toLocaleString()))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginBottom: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#4B5563',
+      fontWeight: 700,
+      letterSpacing: 1,
+      marginBottom: 4
+    }
+  }, "DAILY DEPOSIT LIMIT (KES)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: depLimit,
+    onChange: e => setDepLimit(e.target.value),
+    style: {
+      width: '100%',
+      background: '#1e293b',
+      border: '1px solid #334155',
+      borderRadius: 8,
+      padding: '8px 10px',
+      color: '#F1F5F9',
+      fontSize: 13,
+      outline: 'none',
+      boxSizing: 'border-box'
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginBottom: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#4B5563',
+      fontWeight: 700,
+      letterSpacing: 1,
+      marginBottom: 4
+    }
+  }, "DAILY LOSS LIMIT (KES)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: lossLimit2,
+    onChange: e => setLossLimit2(e.target.value),
+    style: {
+      width: '100%',
+      background: '#1e293b',
+      border: '1px solid #334155',
+      borderRadius: 8,
+      padding: '8px 10px',
+      color: '#F1F5F9',
+      fontSize: 13,
+      outline: 'none',
+      boxSizing: 'border-box'
+    }
+  })), /*#__PURE__*/React.createElement("button", {
+    onClick: save,
+    style: {
+      width: '100%',
+      padding: '11px',
+      background: 'linear-gradient(135deg,#0284C7,#0369A1)',
+      border: 'none',
+      borderRadius: 10,
+      color: '#fff',
+      fontWeight: 800,
+      fontSize: 12,
+      cursor: 'pointer'
+    }
+  }, saving ? 'SAVING...' : 'SAVE LIMITS')), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setOpen(false),
+    style: {
+      marginTop: 8,
+      width: '100%',
+      padding: '8px',
+      background: 'transparent',
+      border: 'none',
+      color: '#4B5563',
+      fontSize: 11,
+      cursor: 'pointer'
+    }
+  }, "CLOSE")));
+}
+
+/* ════════════ PWA INSTALL BANNER ════════════ */
+function InstallBanner() {
+  const [show, setShow] = React.useState(false);
+  React.useEffect(() => {
+    if (window.__pwaReady) setShow(true);
+    const h = () => setShow(true);
+    window.addEventListener('pwa-ready', h);
+    window.addEventListener('appinstalled', () => setShow(false));
+    return () => window.removeEventListener('pwa-ready', h);
+  }, []);
+  if (!show) return null;
+  function doInstall() {
+    if (!window._deferredInstall) return;
+    window._deferredInstall.prompt();
+    window._deferredInstall.userChoice.then(() => {
+      window._deferredInstall = null;
+      setShow(false);
+    });
+  }
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'fixed',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      background: 'linear-gradient(135deg,#0f172a,#1e1b4b)',
+      borderTop: '2px solid #EF4444',
+      padding: '10px 16px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      zIndex: 9000,
+      boxShadow: '0 -4px 20px rgba(0,0,0,0.6)'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 24
+    }
+  }, "✈️"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      fontWeight: 800,
+      color: '#F1F5F9',
+      letterSpacing: .5
+    }
+  }, "Install Mbogi Angani"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#64748B'
+    }
+  }, "Add to home screen — plays like an app"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 8,
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShow(false),
+    style: {
+      padding: '6px 10px',
+      background: 'transparent',
+      border: '1px solid #334155',
+      borderRadius: 8,
+      color: '#64748B',
+      fontSize: 11,
+      fontWeight: 700,
+      cursor: 'pointer'
+    }
+  }, "Later"), /*#__PURE__*/React.createElement("button", {
+    onClick: doInstall,
+    style: {
+      padding: '6px 12px',
+      background: 'linear-gradient(135deg,#EF4444,#B91C1C)',
+      border: 'none',
+      borderRadius: 8,
+      color: '#fff',
+      fontSize: 11,
+      fontWeight: 800,
+      cursor: 'pointer'
+    }
+  }, "INSTALL")));
+}
 function Game({
   user,
   onLogout
@@ -2387,9 +3250,9 @@ function Game({
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [winCelebration, setWinCelebration] = useState(null);
   const [connected, setConnected] = useState(false);
-  const [muted, setMuted] = useState(false);
   const [serverHash, setServerHash] = useState('');
   const [lastSeed, setLastSeed] = useState(null);
+  const [muted, setMuted] = useState(false);
   const [gs, setGs] = useState(BETTING);
   const [mult, setMult] = useState(1.00);
   const [history, setHistory] = useState([2.14, 1.43, 8.72, 1.07, 45.3, 3.21, 1.88, 2.66, 1.15, 12.4]);
@@ -2456,6 +3319,7 @@ function Game({
       setHistory(data.history);
       setCd(data.countdown);
       if (data.serverHash) setServerHash(data.serverHash);
+      if (data.serverHash) setServerHash(data.serverHash);
     });
     return () => {
       socket.off('connect');
@@ -2486,7 +3350,10 @@ function Game({
     amount: winCelebration.amount,
     multiplier: winCelebration.multiplier,
     onDone: () => setWinCelebration(null)
-  }), /*#__PURE__*/React.createElement(InstallBanner, null), /*#__PURE__*/React.createElement(ChatPanel, {
+  }), /*#__PURE__*/React.createElement(ChatPanel, {
+    user: user,
+    socket: socket
+  }), /*#__PURE__*/React.createElement(InstallBanner, null), /*#__PURE__*/React.createElement(InstallBanner, null), /*#__PURE__*/React.createElement(ChatPanel, {
     user: user,
     socket: socket,
     gameState: gs,
@@ -2651,6 +3518,21 @@ function Game({
       fontWeight: 700
     }
   }, "+254 738 425 134")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'center',
+      gap: 6,
+      paddingBottom: 6,
+      flexWrap: 'wrap'
+    }
+  }, /*#__PURE__*/React.createElement(ProvenFair, {
+    serverHash: serverHash,
+    lastSeed: lastSeed
+  }), /*#__PURE__*/React.createElement(ReferralWidget, {
+    user: user
+  }), /*#__PURE__*/React.createElement(RGWidget, {
+    user: user
+  })), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       justifyContent: 'center',
