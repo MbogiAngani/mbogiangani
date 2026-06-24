@@ -1542,6 +1542,7 @@ function mkBotWithTarget() {
 function ChatSidebar({ user, socket }) {
   const [msgs, setMsgs] = React.useState([]);
   const [txt, setTxt] = React.useState('');
+  const scrollRef = React.useRef(null);
 
   React.useEffect(() => {
     socket.on('chat:history', data => setMsgs(data || []));
@@ -1553,6 +1554,15 @@ function ChatSidebar({ user, socket }) {
       window.removeEventListener('bot-chat', onBot);
     };
   }, []);
+
+  // Auto-scroll to the latest message, but only if the user is already
+  // near the bottom (so scrolling up to read history isn't yanked away)
+  React.useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    if (nearBottom) el.scrollTop = el.scrollHeight;
+  }, [msgs]);
 
   function send() {
     const t = txt.trim();
@@ -1567,17 +1577,18 @@ function ChatSidebar({ user, socket }) {
     return ACOLORS[Math.abs(h)%ACOLORS.length];
   }
 
-  // Show last 8 messages, newest at bottom, NO scrollIntoView - fixed container
-  const visible = msgs.slice(-8);
+  // Full available history (capped upstream at 50) — scrollable
+  const visible = msgs;
 
-  return React.createElement('div', { style:{ display:'flex', flexDirection:'column', height:'100%' } },
-    // Messages area — fixed, no scroll push
+  return React.createElement('div', { style:{ display:'flex', flexDirection:'column', height:'100%', minHeight:0 } },
+    // Messages area — real scroll, newest auto-followed
     React.createElement('div', {
+      ref: scrollRef,
       style: {
-        flex:1, minHeight:0, overflow:'hidden', padding:'4px 6px',
-        display:'flex', flexDirection:'column', justifyContent:'flex-end', gap:3,
-        maskImage:'linear-gradient(to bottom, transparent 0%, black 30%)',
-        WebkitMaskImage:'linear-gradient(to bottom, transparent 0%, black 30%)'
+        flex:1, minHeight:0, overflowY:'auto', padding:'4px 6px',
+        display:'flex', flexDirection:'column', gap:3,
+        maskImage:'linear-gradient(to bottom, transparent 0%, black 24px)',
+        WebkitMaskImage:'linear-gradient(to bottom, transparent 0%, black 24px)'
       }
     },
       visible.map(m => React.createElement('div', {
@@ -1601,11 +1612,11 @@ function ChatSidebar({ user, socket }) {
           onKeyDown:e=>e.key==='Enter'&&send(),
           placeholder: user ? 'Type...' : 'Login to chat',
           disabled:!user,
-          style:{ flex:1, background:'#1a1d2e', border:'1px solid #2d3148', borderRadius:6, padding:'5px 7px', color:'#F1F5F9', fontSize:10, outline:'none' }
+          style:{ flex:1, minWidth:0, background:'#1a1d2e', border:'1px solid #2d3148', borderRadius:6, padding:'5px 7px', color:'#F1F5F9', fontSize:10, outline:'none' }
         }),
         React.createElement('button', {
           onClick:send, disabled:!user||!txt.trim(),
-          style:{ padding:'5px 8px', background: user&&txt.trim()?'#2563EB':'#1a1d2e', border:'none', borderRadius:6, color: user&&txt.trim()?'#fff':'#374151', fontSize:10, cursor: user&&txt.trim()?'pointer':'not-allowed' }
+          style:{ flexShrink:0, padding:'5px 8px', background: user&&txt.trim()?'#2563EB':'#1a1d2e', border:'none', borderRadius:6, color: user&&txt.trim()?'#fff':'#374151', fontSize:10, cursor: user&&txt.trim()?'pointer':'not-allowed' }
         }, '▶')
       )
     )
@@ -1614,13 +1625,14 @@ function ChatSidebar({ user, socket }) {
 
 function LivePanel({
   gameState,
-  multiplier
+  multiplier,
+  fill
 }) {
   const [tab, setTab] = useState('all');
   const betsRef = useRef(Array.from({
-    length: 12
+    length: 24
   }, mkBotWithTarget));
-  const [displayBets, setDisplayBets] = useState(() => betsRef.current.slice(0, 10));
+  const [displayBets, setDisplayBets] = useState(() => betsRef.current.slice());
   const topBets = useRef(Array.from({
     length: 10
   }, () => ({
@@ -1637,9 +1649,9 @@ function LivePanel({
     if (gameState === BETTING) {
       // Reset all bots for new round
       betsRef.current = Array.from({
-        length: 12
+        length: 24
       }, mkBotWithTarget);
-      setDisplayBets(betsRef.current.slice(0, 10));
+      setDisplayBets(betsRef.current.slice());
       return;
     }
     if (gameState === CRASHED) {
@@ -1648,7 +1660,7 @@ function LivePanel({
         ...x,
         lost: true
       });
-      setDisplayBets(betsRef.current.slice(0, 10));
+      setDisplayBets(betsRef.current.slice());
       return;
     }
   }, [gameState]);
@@ -1687,12 +1699,21 @@ function LivePanel({
           changed = true;
         }
       }
-      if (changed) setDisplayBets([...betsRef.current.slice(0, 10)]);
+      if (changed) setDisplayBets([...betsRef.current]);
     }, 300);
     return () => clearInterval(iv);
   }, [gameState]);
   return /*#__PURE__*/React.createElement("div", {
-    style: {
+    style: fill ? {
+      background: '#111827',
+      border: 'none',
+      borderRadius: 0,
+      overflow: 'hidden',
+      flex: 1,
+      display: 'flex',
+      flexDirection: 'column',
+      minHeight: 0
+    } : {
       background: '#111827',
       borderRadius: 10,
       border: '1px solid #1f2937',
@@ -1701,7 +1722,8 @@ function LivePanel({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
-      borderBottom: '1px solid #1f2937'
+      borderBottom: '1px solid #1f2937',
+      flexShrink: 0
     }
   }, [{
     k: 'all',
@@ -1723,16 +1745,12 @@ function LivePanel({
       cursor: 'pointer',
       borderBottom: tab === t.k ? '2px solid #F97316' : '2px solid transparent'
     }
-  }, t.l)), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      padding: '0 10px',
-      fontSize: 10,
-      color: '#374151'
-    }
-  }, displayBets.length, " players")), /*#__PURE__*/React.createElement("div", {
-    style: {
+  }, t.l))), /*#__PURE__*/React.createElement("div", {
+    style: fill ? {
+      flex: 1,
+      minHeight: 0,
+      overflowY: 'auto'
+    } : {
       maxHeight: 180,
       overflowY: 'auto'
     }
@@ -3594,6 +3612,7 @@ function Game({
       padding: '0 12px'
     }
   }, /*#__PURE__*/React.createElement("div", {
+    className: "nav-row",
     style: {
       display: 'flex',
       alignItems: 'center',
@@ -3601,6 +3620,7 @@ function Game({
       padding: '8px 0 6px'
     }
   }, /*#__PURE__*/React.createElement("div", {
+    className: "nav-left",
     style: {
       display: 'flex',
       alignItems: 'center',
@@ -3653,6 +3673,7 @@ function Game({
     },
     title: muted ? 'Unmute' : 'Mute'
   }, muted ? '🔇' : '🔊', /*#__PURE__*/React.createElement('span',{style:{fontSize:8,color:muted?'#6B7280':'#F97316',fontWeight:700}},muted?'OFF':'ON'))), /*#__PURE__*/React.createElement("div", {
+    className: "nav-right",
     style: {
       display: 'flex',
       alignItems: 'center',
@@ -3695,6 +3716,7 @@ function Game({
       color: '#F9FAFB'
     }
   }, user.username), /*#__PURE__*/React.createElement("div", {
+    className: "phone-num",
     style: {
       fontSize: 8,
       color: '#4B5563'
@@ -3778,11 +3800,11 @@ function Game({
   /* ── CHAT LEFT | BETS RIGHT ── */
   /*#__PURE__*/React.createElement("div", {
     className: "bottom-row",
-    style: { display:'flex', gap:0, borderTop:'1px solid #1f2937', marginTop:8 }
+    style: { display:'grid', gridTemplateColumns:'clamp(130px,36%,250px) 1fr', alignItems:'stretch', borderTop:'1px solid #1f2937', marginTop:8 }
   },
     /*#__PURE__*/React.createElement("div", {
       className: "chat-col",
-      style: { width:'clamp(130px,36%,250px)', flexShrink:0, borderRight:'1px solid #1f2937', display:'flex', flexDirection:'column', height:214, maxHeight:214, overflow:'hidden' }
+      style: { minHeight:0, minWidth:0, borderRight:'1px solid #1f2937', display:'flex', flexDirection:'column', overflow:'hidden' }
     },
       /*#__PURE__*/React.createElement("div", {
         style:{ padding:'6px 10px', borderBottom:'1px solid #1f2937', fontSize:10, fontWeight:800, color:'#F97316', display:'flex', alignItems:'center', gap:5, flexShrink:0 }
@@ -3792,16 +3814,9 @@ function Game({
       ),
       /*#__PURE__*/React.createElement(ChatSidebar, { user:user, socket:socket })
     ),
-    /*#__PURE__*/React.createElement("div", { style:{ flex:1, minWidth:0 } },
+    /*#__PURE__*/React.createElement("div", { style:{ minWidth:0, minHeight:0 } },
       /*#__PURE__*/React.createElement(LivePanel, { gameState:gs, multiplier:mult })
     )
-  ),
-  /* ── online bar ── */
-  /*#__PURE__*/React.createElement("div", {
-    style:{ padding:'5px 10px', display:'flex', alignItems:'center', gap:6, borderTop:'1px solid #1f2937', background:'#06060f' }
-  },
-    /*#__PURE__*/React.createElement("div",{style:{width:7,height:7,background:'#22C55E',borderRadius:'50%',animation:'pulse 2s infinite'}}),
-    /*#__PURE__*/React.createElement("span",{style:{fontSize:10,color:'#22C55E',fontWeight:700}}, onlineCount, " players online")
   ));
 }
 
@@ -4029,11 +4044,16 @@ function App() {
     max: 5
   }), /*#__PURE__*/React.createElement("div", {
     style: {
-      padding: '0 max(8px,2vw) 16px'
+      padding: '0 max(8px,2vw) 0',
+      flex: 1,
+      display: 'flex',
+      flexDirection: 'column',
+      minHeight: 0
     }
   }, /*#__PURE__*/React.createElement(LivePanel, {
     gameState: bgGs,
-    multiplier: bgMult
+    multiplier: bgMult,
+    fill: true
   })));
 }
 

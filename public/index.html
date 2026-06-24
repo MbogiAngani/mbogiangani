@@ -43,10 +43,18 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
   .bet-row{flex-direction:column!important;}
 }
 
-/* ── chat+bets row: always side by side on all screen sizes ── */
-.bottom-row{display:flex;gap:0;align-items:flex-start;}
+/* ── chat+bets row: CSS grid so both columns always share the same height ── */
 @media(max-width:480px){
-  .chat-col{width:clamp(90px,35%,140px)!important;height:214px!important;max-height:214px!important;overflow:hidden!important;}
+  .bottom-row{grid-template-columns:clamp(90px,35%,140px) 1fr!important;}
+}
+
+/* ── top nav: stack into two rows on narrow portrait screens so nothing (e.g. LOGOUT) gets clipped ── */
+@media(max-width:480px){
+  .nav-row{flex-wrap:wrap;row-gap:6px;}
+  .nav-left,.nav-right{flex:1 1 100%;justify-content:space-between;}
+}
+@media(max-width:360px){
+  .phone-num{display:none;}
 }
 </style>
 </head>
