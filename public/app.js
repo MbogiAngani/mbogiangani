@@ -2893,18 +2893,21 @@ function ReferralWidget({
     style: {
       display: 'flex',
       alignItems: 'center',
-      gap: 5,
-      background: 'transparent',
-      border: '1px solid #16A34A44',
-      borderRadius: 20,
-      padding: '3px 10px',
+      justifyContent: 'center',
+      gap: 6,
+      width: '100%',
+      background: 'linear-gradient(135deg,#065F46,#047857)',
+      border: '1px solid #16A34A',
+      borderRadius: 8,
+      padding: '9px 0',
       color: '#4ADE80',
-      fontSize: 9,
+      fontSize: 12,
       cursor: 'pointer',
-      fontWeight: 700,
-      letterSpacing: 1
+      fontWeight: 800,
+      letterSpacing: 1,
+      boxShadow: '0 2px 10px rgba(22,163,74,0.25)'
     }
-  }, "🎁 REFER & EARN");
+  }, "🎁 REFER & EARN — KES 20 BONUS");
   return /*#__PURE__*/React.createElement("div", {
     style: {
       position: 'fixed',
@@ -3670,7 +3673,7 @@ function Game({
       boxShadow: '0 2px 10px rgba(147,51,234,0.3)',
       letterSpacing: .5
     }
-  }, "↓ WITHDRAW"))), /*#__PURE__*/React.createElement(HistoryBar, {
+  }, "↓ WITHDRAW"))), /*#__PURE__*/React.createElement("div", { style:{ padding:"0 8px 8px" } }, /*#__PURE__*/React.createElement(ReferralWidget, { user })), /*#__PURE__*/React.createElement(HistoryBar, {
     history: history
   }), /*#__PURE__*/React.createElement(GameCanvas, {
     gameState: gs,
