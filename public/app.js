@@ -1626,7 +1626,8 @@ function ChatSidebar({ user, socket }) {
 function LivePanel({
   gameState,
   multiplier,
-  fill
+  fill,
+  boxHeight
 }) {
   const [tab, setTab] = useState('all');
   const betsRef = useRef(Array.from({
@@ -1713,6 +1714,15 @@ function LivePanel({
       display: 'flex',
       flexDirection: 'column',
       minHeight: 0
+    } : boxHeight ? {
+      background: '#111827',
+      borderRadius: 10,
+      border: '1px solid #1f2937',
+      overflow: 'hidden',
+      height: boxHeight,
+      maxHeight: boxHeight,
+      display: 'flex',
+      flexDirection: 'column'
     } : {
       background: '#111827',
       borderRadius: 10,
@@ -1746,7 +1756,7 @@ function LivePanel({
       borderBottom: tab === t.k ? '2px solid #F97316' : '2px solid transparent'
     }
   }, t.l))), /*#__PURE__*/React.createElement("div", {
-    style: fill ? {
+    style: (fill || boxHeight) ? {
       flex: 1,
       minHeight: 0,
       overflowY: 'auto'
@@ -3638,6 +3648,8 @@ function Game({
       display: 'flex',
       alignItems: 'center',
       gap: 5,
+      whiteSpace: 'nowrap',
+      flexShrink: 0,
       boxShadow: '0 0 18px rgba(239,68,68,0.4)'
     }
   }, "✈ MBOGI ANGANI"), /*#__PURE__*/React.createElement("div", {
@@ -3800,11 +3812,11 @@ function Game({
   /* ── CHAT LEFT | BETS RIGHT ── */
   /*#__PURE__*/React.createElement("div", {
     className: "bottom-row",
-    style: { display:'grid', gridTemplateColumns:'clamp(130px,36%,250px) 1fr', alignItems:'stretch', borderTop:'1px solid #1f2937', marginTop:8 }
+    style: { display:'flex', gap:0, borderTop:'1px solid #1f2937', marginTop:8 }
   },
     /*#__PURE__*/React.createElement("div", {
       className: "chat-col",
-      style: { minHeight:0, minWidth:0, borderRight:'1px solid #1f2937', display:'flex', flexDirection:'column', overflow:'hidden' }
+      style: { width:'clamp(130px,36%,250px)', flexShrink:0, height:220, maxHeight:220, overflow:'hidden', borderRight:'1px solid #1f2937', display:'flex', flexDirection:'column' }
     },
       /*#__PURE__*/React.createElement("div", {
         style:{ padding:'6px 10px', borderBottom:'1px solid #1f2937', fontSize:10, fontWeight:800, color:'#F97316', display:'flex', alignItems:'center', gap:5, flexShrink:0 }
@@ -3814,8 +3826,8 @@ function Game({
       ),
       /*#__PURE__*/React.createElement(ChatSidebar, { user:user, socket:socket })
     ),
-    /*#__PURE__*/React.createElement("div", { style:{ minWidth:0, minHeight:0 } },
-      /*#__PURE__*/React.createElement(LivePanel, { gameState:gs, multiplier:mult })
+    /*#__PURE__*/React.createElement("div", { style:{ flex:1, minWidth:0 } },
+      /*#__PURE__*/React.createElement(LivePanel, { gameState:gs, multiplier:mult, boxHeight:220 })
     )
   ));
 }
