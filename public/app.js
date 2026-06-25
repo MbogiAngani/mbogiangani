@@ -3634,7 +3634,7 @@ function Game({
     style: {
       display: 'flex',
       alignItems: 'center',
-      gap: 8
+      gap: 10
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -3653,45 +3653,6 @@ function Game({
       boxShadow: '0 0 18px rgba(239,68,68,0.4)'
     }
   }, "✈ MBOGI ANGANI"), /*#__PURE__*/React.createElement("div", {
-    style: { display:'flex', alignItems:'center', gap:8 }
-  },
-    /*#__PURE__*/React.createElement("div", {
-      style: { display:'flex', alignItems:'center', gap:4 }
-    },
-      /*#__PURE__*/React.createElement("div", { style:{ width:6, height:6, background:connected?'#4ADE80':'#EF4444', borderRadius:'50%', animation:'pulse 2s infinite' } }),
-      /*#__PURE__*/React.createElement("span", { style:{ fontSize:8, color:connected?'#4ADE80':'#EF4444', fontWeight:700, letterSpacing:1 } }, connected?'LIVE':'...')
-    ),
-    /*#__PURE__*/React.createElement("div", { style:{ display:'flex', alignItems:'center', gap:4, background:'#0f1218', borderRadius:6, padding:'3px 8px' } },
-      /*#__PURE__*/React.createElement("div", { style:{ width:6, height:6, background:'#22C55E', borderRadius:'50%', animation:'pulse 2s infinite' } }),
-      /*#__PURE__*/React.createElement("span", { style:{ fontSize:9, color:'#22C55E', fontWeight:700 } }, onlineCount, ' online')
-    )
-  ), /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      window.__muted = !window.__muted;
-      setMuted(window.__muted);
-      if (window.__muted) { _engineStop(); } else { _getCtx(); }
-    },
-    style: {
-      background: muted ? '#1f2937' : 'rgba(239,68,68,0.12)',
-      border: muted ? '1px solid #374151' : '1px solid #EF444455',
-      borderRadius: 7,
-      cursor: 'pointer',
-      fontSize: 14,
-      padding: '4px 8px',
-      color: '#fff',
-      display: 'flex',
-      alignItems: 'center',
-      gap: 3
-    },
-    title: muted ? 'Unmute' : 'Mute'
-  }, muted ? '🔇' : '🔊', /*#__PURE__*/React.createElement('span',{style:{fontSize:8,color:muted?'#6B7280':'#F97316',fontWeight:700}},muted?'OFF':'ON'))), /*#__PURE__*/React.createElement("div", {
-    className: "nav-right",
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 10
-    }
-  }, /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: 'right'
     }
@@ -3747,7 +3708,46 @@ function Game({
       fontWeight: 700,
       marginLeft: 2
     }
-  }, "LOGOUT")))),  /*#__PURE__*/React.createElement("div", {
+  }, "LOGOUT"))), /*#__PURE__*/React.createElement("div", {
+    className: "nav-right",
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { display:'flex', alignItems:'center', gap:8 }
+  },
+    /*#__PURE__*/React.createElement("div", {
+      style: { display:'flex', alignItems:'center', gap:4 }
+    },
+      /*#__PURE__*/React.createElement("div", { style:{ width:6, height:6, background:connected?'#4ADE80':'#EF4444', borderRadius:'50%', animation:'pulse 2s infinite' } }),
+      /*#__PURE__*/React.createElement("span", { style:{ fontSize:8, color:connected?'#4ADE80':'#EF4444', fontWeight:700, letterSpacing:1 } }, connected?'LIVE':'...')
+    ),
+    /*#__PURE__*/React.createElement("div", { style:{ display:'flex', alignItems:'center', gap:4, background:'#0f1218', borderRadius:6, padding:'3px 8px' } },
+      /*#__PURE__*/React.createElement("div", { style:{ width:6, height:6, background:'#22C55E', borderRadius:'50%', animation:'pulse 2s infinite' } }),
+      /*#__PURE__*/React.createElement("span", { style:{ fontSize:9, color:'#22C55E', fontWeight:700 } }, onlineCount, ' online')
+    )
+  ), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      window.__muted = !window.__muted;
+      setMuted(window.__muted);
+      if (window.__muted) { _engineStop(); } else { _getCtx(); }
+    },
+    style: {
+      background: muted ? '#1f2937' : 'rgba(239,68,68,0.12)',
+      border: muted ? '1px solid #374151' : '1px solid #EF444455',
+      borderRadius: 7,
+      cursor: 'pointer',
+      fontSize: 14,
+      padding: '4px 8px',
+      color: '#fff',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 3
+    },
+    title: muted ? 'Unmute' : 'Mute'
+  }, muted ? '🔇' : '🔊', /*#__PURE__*/React.createElement('span',{style:{fontSize:8,color:muted?'#6B7280':'#F97316',fontWeight:700}},muted?'OFF':'ON')))),  /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       gap: 8,
@@ -3816,7 +3816,7 @@ function Game({
   },
     /*#__PURE__*/React.createElement("div", {
       className: "chat-col",
-      style: { width:'clamp(130px,36%,250px)', flexShrink:0, height:220, maxHeight:220, overflow:'hidden', borderRight:'1px solid #1f2937', display:'flex', flexDirection:'column' }
+      style: { width:'clamp(150px,42%,270px)', flexShrink:0, height:220, maxHeight:220, overflow:'hidden', borderRight:'1px solid #1f2937', display:'flex', flexDirection:'column' }
     },
       /*#__PURE__*/React.createElement("div", {
         style:{ padding:'6px 10px', borderBottom:'1px solid #1f2937', fontSize:10, fontWeight:800, color:'#F97316', display:'flex', alignItems:'center', gap:5, flexShrink:0 }
