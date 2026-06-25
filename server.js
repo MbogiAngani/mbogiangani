@@ -188,11 +188,60 @@ function genCrash(houseEdge=0.35) {
 //  table and chat reactions, all tied to the real round
 // ════════════════════════════════════════════════════
 const BOT_NAMES = [
+  // OG 24
   'Kamau_G','Wanjiku01','MburuWave','Akinyi_X','Otieno254','Njoro_Fly',
   'SharonMtaa','BrianOG','GraceKali','JojoWapi','MercySheng','PatoVibes',
   'EstherFlip','SamuelB','NaivaFlyer','KipsangBet','WinniePesa','DennoKsh',
-  'TotoWa254','Ciku_Real','BobbyMtaa','AmyFlip','SteveKe','LucyVibes'
+  'TotoWa254','Ciku_Real','BobbyMtaa','AmyFlip','SteveKe','LucyVibes',
+  // Batch 2
+  'Njuguna_X','FaithWahu','KibiraFlip','OmondiGo','TracyNai','DavidMtaa',
+  'MwasKe254','NancyVibes','JosphatBet','AnnWanjiku','PeterOdhis','RoseFlip',
+  'CalvinSheng','JudithPesa','FredMbogi','AliceKali','MaxOtis','ZippyNrb',
+  'TrevorKsh','NelsonBet','PhilipFlip','BeatriceFly','SamsonWave','MillyVibes',
+  // Batch 3
+  'KenyanKing','NairobiGal','ShengMaster','JetFlyer254','CrashKing01','HoldBro',
+  'CashoutQueen','PesaFlip','MtaaLegend','BetKing254','FlyHighKe','WinnerWahu',
+  'Hustler254','NjuguBet','ManyattaFly','KiberaKid','EastlandsG','WestlandsV',
+  'SouthCFlip','UpperHillK','KarenVibes','RuiruBet','JujaBoy','ThikaBoss',
+  // Batch 4
+  'MombiBoy','MtaaniKid','Ngugi_Fly','ChepsiBet','HalfTimeKe','JamiiFlip',
+  'KennyWave','LoisNrb','MikaBoss','NjokiReal','OchiengBet','PruVibes',
+  'QuinsonKe','RachelFlip','SimonMtaa','TinaMbogi','UlrichBet','VioletKali',
+  'WilsonOG','XandraFly','YusufBet','ZoeVibes','AbelFlip','BarnabasPesa',
+  // Batch 5
+  'CalebKsh','DeborahNai','EliudFly','FlorenceWin','GideonBet','HannahKe',
+  'IanMtaa','JaneFlip','KaluluBoss','LewisVibes','MabelSheng','NathanKali',
+  'OlgaBet','PascalFly','QuincyKe','RebeccaWin','SolomonBet','TabithaOG',
+  'UriahFlip','VeronicaPesa','WalterMtaa','XimenaKsh','YasminVibes','ZachFly',
+  // Batch 6
+  'AdrianKe','BrendaNai','ClementBet','DianeFly','EmanuelKsh','FidaVibes',
+  'GabrielFlip','HelenaWin','IsaacMtaa','JoycePesa','KennethBet','LilianFly',
+  'MartinKali','NorahOG','OswaldSheng','PenelopeKe','RafaelBet','StellaVibes',
+  'TimothyFlip','UrsulaNai','VictorWin','WendyKsh','XavierMtaa','YollandaBet',
+  // Batch 7
+  'Zipporah_Fly','AaronKe','BethaniBoss','CyrusPesa','DelilahBet','EnochFly',
+  'FinnVibes','GloriaSheng','HezekiahKsh','IsabellaWin','JeremiahFlip','KimaniOG',
+  'LavinaMtaa','MalachiBet','NadiaKe','ObadiahFly','PortiaPesa','QuintinKali',
+  'RubyVibes','SeraphinaBet','TitoFlip','UrikaKsh','ValentineWin','WanjalaOG',
+  // Batch 8 — more street/sheng style
+  'Cess_Ke','Drix254','Flexx_Nrb','Gee_Mtaa','Hype_Ke','Jae_Fly',
+  'Kry_Bet','Lax_Pesa','Mex_Ksh','Nax_Vibes','Oxx_Flip','Pex_Win',
+  'Qua_Boss','Rex_OG','Sax_Kali','Tax_Sheng','Ux_Nai','Vex_Bet',
+  'Wax_Fly','Xen_Ke','Yen_Pesa','Zex_Flip','Ace_Mtaa','Bex_Ksh',
+  // Batch 9
+  'Chip_254','Drop_Ke','Envy_Fly','Fire_Bet','Glow_Pesa','Haze_Win',
+  'Icy_Kali','Jolt_OG','Kush_Sheng','Lyte_Nai','Maze_Flip','Nova_Ke',
+  'Onyx_Bet','Pixl_Ksh','Quake_Fly','Rave_Pesa','Skye_Win','Tide_Mtaa',
+  'Urge_Bet','Volt_Ke','Wave_Fly','Xero_Ksh','Yung_Pesa','Zero_OG',
+  // Batch 10
+  'Afro_Ke','Blaze_Bet','Crypt_Fly','Dope_Win','Echo_Pesa','Faze_Kali',
+  'Grind_OG','Hood_Sheng','Ink_Nai','Jive_Ke','Kool_Bet','Loot_Fly',
+  'Myth_Ksh','Neon_Pesa','Orbit_Win','Plug_Mtaa','Quest_Bet','Rush_Ke',
+  'Sync_Fly','Trap_OG','Unit_Kali','Vibe_Sheng','Woke_Nai','Xprt_Bet',
 ];
+// per-round bot count — picks a random subset so table looks fresh every round
+const BOT_COUNT_MIN = 22;
+const BOT_COUNT_MAX = 38;
 const BOT_AVATARS = ['🧑','👱','👩','🧔','👧','🧑‍💼','👨‍💻','👩‍💼','🧑‍🎤','👦','👩‍🦰','🧑‍🦱'];
 
 function mkLiveBot(name) {
@@ -209,7 +258,10 @@ function mkLiveBot(name) {
     lost: false,
   };
 }
-function mkLiveBots() { return BOT_NAMES.map(mkLiveBot); }
+function mkLiveBots() {
+  const count = BOT_COUNT_MIN + Math.floor(Math.random() * (BOT_COUNT_MAX - BOT_COUNT_MIN + 1));
+  return shuffle(BOT_NAMES).slice(0, count).map(mkLiveBot);
+}
 function shuffle(arr) {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
