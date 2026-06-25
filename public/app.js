@@ -3634,13 +3634,13 @@ function Game({
     style: {
       display: 'flex',
       alignItems: 'center',
-      gap: 10
+      gap: 6
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       background: 'linear-gradient(135deg,#EF4444,#B91C1C)',
       borderRadius: 8,
-      padding: '5px 12px',
+      padding: '5px 10px',
       fontWeight: 900,
       fontSize: 'clamp(11px,4vw,16px)',
       letterSpacing: 2,
@@ -3662,7 +3662,7 @@ function Game({
       color: '#4B5563',
       letterSpacing: 1
     }
-  }, "BALANCE"), /*#__PURE__*/React.createElement("div", {
+  }, "BAL"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 14,
       fontWeight: 800,
@@ -3672,26 +3672,26 @@ function Game({
     style: {
       display: 'flex',
       alignItems: 'center',
-      gap: 6,
+      gap: 4,
       background: '#111827',
       border: '1px solid #1f2937',
       borderRadius: 9,
-      padding: '4px 10px'
+      padding: '4px 7px'
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
-      fontSize: 16
+      fontSize: 14
     }
   }, "👤"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
-      fontSize: 11,
+      fontSize: 10,
       fontWeight: 700,
       color: '#F9FAFB'
     }
   }, user.username), /*#__PURE__*/React.createElement("div", {
     className: "phone-num",
     style: {
-      fontSize: 8,
+      fontSize: 7,
       color: '#4B5563'
     }
   }, user.phone)), /*#__PURE__*/React.createElement("button", {
@@ -3702,21 +3702,20 @@ function Game({
       border: 'none',
       color: '#6B7280',
       borderRadius: 5,
-      padding: '2px 6px',
+      padding: '2px 5px',
       cursor: 'pointer',
       fontSize: 9,
       fontWeight: 700,
-      marginLeft: 2
+      marginLeft: 1
     }
   }, "LOGOUT"))), /*#__PURE__*/React.createElement("div", {
     className: "nav-right",
     style: {
       display: 'flex',
       alignItems: 'center',
+      justifyContent: 'space-between',
       gap: 8
     }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: { display:'flex', alignItems:'center', gap:8 }
   },
     /*#__PURE__*/React.createElement("div", {
       style: { display:'flex', alignItems:'center', gap:4 }
@@ -3727,8 +3726,8 @@ function Game({
     /*#__PURE__*/React.createElement("div", { style:{ display:'flex', alignItems:'center', gap:4, background:'#0f1218', borderRadius:6, padding:'3px 8px' } },
       /*#__PURE__*/React.createElement("div", { style:{ width:6, height:6, background:'#22C55E', borderRadius:'50%', animation:'pulse 2s infinite' } }),
       /*#__PURE__*/React.createElement("span", { style:{ fontSize:9, color:'#22C55E', fontWeight:700 } }, onlineCount, ' online')
-    )
-  ), /*#__PURE__*/React.createElement("button", {
+    ),
+    /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       window.__muted = !window.__muted;
       setMuted(window.__muted);
