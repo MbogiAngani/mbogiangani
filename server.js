@@ -184,7 +184,8 @@ function genCrash(houseEdge=0.35) {
 }
 
 // ════════════════════════════════════════════════════
-//  BOT CHAT ENGINE
+//  LIVE BOTS — same identities power both the "All Bets"
+//  table and chat reactions, all tied to the real round
 // ════════════════════════════════════════════════════
 const BOT_NAMES = [
   'Kamau_G','Wanjiku01','MburuWave','Akinyi_X','Otieno254','Njoro_Fly',
@@ -192,109 +193,118 @@ const BOT_NAMES = [
   'EstherFlip','SamuelB','NaivaFlyer','KipsangBet','WinniePesa','DennoKsh',
   'TotoWa254','Ciku_Real','BobbyMtaa','AmyFlip','SteveKe','LucyVibes'
 ];
+const BOT_AVATARS = ['🧑','👱','👩','🧔','👧','🧑‍💼','👨‍💻','👩‍💼','🧑‍🎤','👦','👩‍🦰','🧑‍🦱'];
 
-const BOT_MSGS = {
-  betting: [
-    ['Njoro_Fly','wacha nieka 200 hii round'],
-    ['Wanjiku01','aki nakaa niamini hii ni yetu 🙏'],
-    ['MburuWave','bro unapanga kueka ngapi?'],
-    ['Otieno254','hii game inaniua pole pole 😂'],
-    ['SharonMtaa','nalala na 500 this time'],
-    ['BrianOG','round hii naona inafika 5x'],
-    ['GraceKali','aki mimi niko broke already lmao'],
-    ['JojoWapi','tunaeza pata 10x leo?'],
-    ['PatoVibes','Last round ilinichoma vibaya sana 😭'],
-    ['KipsangBet','naskia server ilisema 50x next 👀'],
-    ['WinniePesa','mimi betting small, trauma imeniambia'],
-    ['DennoKsh','vibes zangu zinasema 3x hii round'],
-    ['TotoWa254','Manze hii round lazima nicash out early'],
-    ['Ciku_Real','watu mnaenda kwa bet gani?'],
-    ['BobbyMtaa','sijui kama hii ni smart but... 500 iko'],
-    ['AmyFlip','aki nifanye budget calculation kwanza 😭'],
-    ['SteveKe','niko ready kulipa deni yangu leo'],
-    ['LucyVibes','hii ndiyo round ya kwanza yangu leo'],
-    ['Kamau_G','@Njoro_Fly wewe daima unasema hivyo bro 😂'],
-    ['Akinyi_X','@Wanjiku01 trust the process sis'],
-    ['MercySheng','@BrianOG 5x? ukweli? nitakuambia baadaye'],
-    ['EstherFlip','last round nilikimbia at 1.3 naskia peke yangu'],
-    ['SamuelB','@PatoVibes same bro nikiambia trauma ni real'],
-    ['NaivaFlyer','100 tu hii round, heart yangu haiwezi'],
-    ['Otieno254','@DennoKsh vibes au data? 😂'],
-  ],
-  flying: [
-    ['Kamau_G','GO GO GO 🚀'],
-    ['Wanjiku01','toa toa!!'],
-    ['MburuWave','cashout at 2x bro!!'],
-    ['BrianOG','HOLD HOLD HOLD 💪'],
-    ['GraceKali','aki nikatoe sasa?'],
-    ['Otieno254','inakuja... inakuja...'],
-    ['SharonMtaa','bro cashout umelala?? 😭'],
-    ['JojoWapi','TOOOA SASA!!'],
-    ['PatoVibes','2x tayari naendelea 💪'],
-    ['KipsangBet','aki niko scared 😰'],
-    ['WinniePesa','3x!! toa toa toa!!'],
-    ['DennoKsh','HOLD... hold...'],
-    ['TotoWa254','nimeshout out tayari 🔥'],
-    ['Ciku_Real','sawa nimekatoa at 2.5 😅'],
-    ['BobbyMtaa','@BrianOG bro hold bana!!'],
-    ['AmyFlip','aki 4x already??'],
-    ['SteveKe','nimeshout 5x yesss'],
-    ['LucyVibes','sijui kama nikatoe au nihold'],
-    ['Njoro_Fly','5x NIKATOA NIMESHINDA 🎉'],
-    ['Akinyi_X','@Njoro_Fly smart move!!'],
-    ['MercySheng','bado niko ndani... 6x...'],
-    ['EstherFlip','aki crash itakuja sasa hivi naona'],
-    ['SamuelB','7x?? bro uongo'],
-    ['NaivaFlyer','mimi nimekatoa at 1.8 pole sana'],
-    ['Kamau_G','@MercySheng TOOOA SASA BRO'],
-    ['Wanjiku01','crash inakuja nahisi mwili wangu 😭'],
-    ['Otieno254','nimeshout 2x naenda kuomba dua'],
-    ['BrianOG','hold... almost... almost...'],
-  ],
-  crashed: [
-    ['Kamau_G','aiiii 😭😭😭'],
-    ['Wanjiku01','aki nilichelewa tena 😩'],
-    ['MburuWave','manze crash ilinichoma'],
-    ['Akinyi_X','nilikatoa at 1.2 naskia vibaya'],
-    ['Otieno254','LOL nilikuwa nataka 10x 💀'],
-    ['SharonMtaa','next round lazima niwe smart'],
-    ['BrianOG','nikakatoa at 3x 🙌 nimeshinda!'],
-    ['GraceKali','crash game ni hivi hivi tu'],
-    ['JojoWapi','aki naanza tena from scratch 😩'],
-    ['PatoVibes','next one ndio yetu fr fr'],
-    ['KipsangBet','hahaha nilifanya dumb decision'],
-    ['WinniePesa','@Kamau_G same bro uchungu'],
-    ['DennoKsh','server ni mjanja kuliko sisi sote'],
-    ['TotoWa254','nimepoteza 300 😭 aki'],
-    ['Ciku_Real','@Njoro_Fly ulikimbia mapema sana!'],
-    ['BobbyMtaa','round hii ilikuwa fast sana'],
-    ['AmyFlip','nilikuwa nimesema 5x lakini...'],
-    ['SteveKe','GG round mbaya sana'],
-    ['LucyVibes','@BrianOG pole sana bro'],
-    ['Njoro_Fly','nimeshinda 200 leo naskia poa'],
-    ['MercySheng','aki nilichomeka mbaya sana 😭😭'],
-    ['EstherFlip','@MercySheng next time beb pole'],
-    ['SamuelB','next round naenda kubig bet'],
-    ['NaivaFlyer','hata mimi. round ya karibu'],
-    ['Kamau_G','aki hii ni trauma ya kweli 💀'],
-    ['Wanjiku01','@PatoVibes always next time sis'],
-    ['Otieno254','nilikimbia at 1.5 naskia poooole'],
-    ['BrianOG','sawa sawa next round'],
-  ],
-};
+function mkLiveBot(name) {
+  // assign each bot a fixed target cashout multiplier at creation
+  const r = Math.random();
+  const target = r<0.55 ? 1.1+Math.random()*1.8 : r<0.80 ? 3+Math.random()*4 : r<0.93 ? 7+Math.random()*13 : 20+Math.random()*80;
+  return {
+    id: Math.random(),
+    name,
+    av: BOT_AVATARS[Math.floor(Math.random()*BOT_AVATARS.length)],
+    bet: (Math.floor(Math.random()*50)+1)*10,
+    target: parseFloat(target.toFixed(2)),
+    cashout: null,
+    lost: false,
+  };
+}
+function mkLiveBots() { return BOT_NAMES.map(mkLiveBot); }
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+let liveBots = mkLiveBots();
+let milestonesHit = new Set();
+let cashoutChatBudget = 5;
+const MILESTONES = [2, 5, 10, 20, 50, 100, 200];
+
+// ════════════════════════════════════════════════════
+//  BOT CHAT ENGINE — reacts to the real round in real time
+// ════════════════════════════════════════════════════
+function fmtM(x){ return parseFloat(x).toFixed(2); }
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function fillTemplate(tpl, m){ return tpl.replace('{m}', fmtM(m)); }
+
+// Ambient banter — no hardcoded numbers, just flavor/mood
+const AMBIENT_BETTING = [
+  'wacha nieka 200 hii round💸','aki nakaa niamini hii ni yetu🙏',
+  'bro unapanga kueka ngapi?','hii game inaniua pole pole😂',
+  'nalala na 500 this time','aki mimi niko broke already lmao',
+  'mimi betting small, trauma imeniambia','Manze lazima nicash out early',
+  'watu mnaenda kwa bet gani?','aki nifanye budget calculation kwanza😭',
+  'niko ready kulipa deni yangu leo','hii ndiyo round ya kwanza yangu leo',
+  'trust the process bro','hii round niko na feeling kubwa',
+  'aki naomba tu usicrash haraka🙏','sijui mbona naendelea kushinda😂',
+  'server leo iko na huruma naona','leo niko focused hakuna distraction',
+  'nimefanya deposit mpya niko fresh','this round feels different guys',
+  'strategy yangu ni cash out early kila wakati','I always say small bets but then...'
+];
+const AMBIENT_FLYING = [
+  'GO GO GO🚀','toa toa!!','HOLD HOLD HOLD💪','aki nikatoe sasa?',
+  'inakuja... inakuja...','bro cashout umelala??😭','TOOOA SASA!!',
+  'aki niko scared😰','HOLD... hold...','nimeshout out tayari🔥',
+  'bro hold bana!!','sijui kama nikatoe au nihold','smart move!!',
+  'aki crash itakuja sasa hivi naona','TOOOA SASA BRO',
+  'crash inakuja nahisi mwili wangu😭','hold... almost... almost...',
+  'guys im holding... pray for me😂','hold sisters!! trust the plane✈️',
+  'bana hold kidogo tu','aki nimepoteza moyo kuhold','toa bana crash itakuja'
+];
+const AMBIENT_CRASHED = [
+  'aiiii😭😭😭','aki nilichelewa tena😩','manze crash ilinichoma',
+  'next round lazima niwe smart','crash game ni hivi hivi tu',
+  'aki naanza tena from scratch😩','next one ndio yetu fr fr',
+  'hahaha nilifanya dumb decision','server ni mjanja kuliko sisi sote',
+  'round hii ilikuwa fast sana','GG round mbaya sana','next time beb pole',
+  'next round naenda kubig bet','hata mimi. round ya karibu',
+  'aki hii ni trauma ya kweli💀','always next time sis','sawa sawa next round',
+  'pole wote waliochomeka next round','aki server haina huruma leo',
+  'crash came so fast aki','GG everyone better luck next',
+  'my heart bana crash inakuwa fast','lesson ya leo: cashout early always'
+];
+// Reactive templates — {m} is filled with the real live number
+const MILESTONE_LINES = [
+  '{m}x tayari!! HOLD bana💪','aki {m}x already??😳',
+  'inakuja... tunafika {m}x...','bado niko ndani... {m}x...',
+  '{m}x na bado inapanda🚀','sasa hivi tunavuka {m}x',
+  '{m}x?? bro hii ni kweli','niko ndani mpaka {m}x😤'
+];
+const CASHOUT_WIN_LINES = [
+  '{m}x NIKATOA NIMESHINDA🎉','nimeshout {m}x yesss',
+  'sawa nimekatoa at {m}x😅','nimekatoa at {m}x pole sana mapema',
+  '{m}x tu lakini pesa ni pesa🙌','nilishout {m}x nikaona inatosha'
+];
+const CRASH_LOSE_LINES = [
+  'ilianguka kwa {m}x😭😭😭','aki crash ilikuja kwa {m}x naskia vibaya',
+  'nilikuwa nikiwait then {m}x ikaja crash💀','manze {m}x ilinichoma',
+  'sikuamini ingeanguka kwa {m}x','nilihold mpaka {m}x kumbe ndio mwisho😩'
+];
+const CRASH_WIN_LINES = [
+  'nimeshinda nilikatoa at {m}x🙌','nimetoka na {m}x naskia poa',
+  '{m}x ilikuwa enough kwangu leo','niliskia tu kukatoa at {m}x, poa kabisa'
+];
+const LAST_ROUND_LINES = [
+  'ile ya juzi {m}x ilikuwa noma!','naskia last round ilikuwa {m}x manze',
+  'mtu alipata {m}x last round, bahati mbaya sikuwa naweka'
+];
 
 let botTimers = [];
 function clearBotTimers(){ botTimers.forEach(t=>clearTimeout(t)); botTimers=[]; }
+function scheduleBotReaction(name, text, delayMs=0) {
+  const t = setTimeout(() => addChat(name, text, true), delayMs);
+  botTimers.push(t);
+}
 
 function scheduleBotChat(phase) {
   clearBotTimers();
-  const pool = BOT_MSGS[phase] || [];
-  if(!pool.length) return;
-
-  // Pick 2-6 messages depending on phase, randomised
+  const pool = phase==='flying' ? AMBIENT_FLYING : phase==='betting' ? AMBIENT_BETTING : AMBIENT_CRASHED;
   const count = phase==='flying'
-    ? 2+Math.floor(Math.random()*5)   // 2-6 during flight
-    : 1+Math.floor(Math.random()*4);  // 1-4 during betting/crash
+    ? 2+Math.floor(Math.random()*4)   // 2-5 during flight
+    : 1+Math.floor(Math.random()*3);  // 1-3 during betting/crash
 
   const picked = [];
   const used = new Set();
@@ -303,17 +313,19 @@ function scheduleBotChat(phase) {
     if(!used.has(idx)){ used.add(idx); picked.push(pool[idx]); }
   }
 
-  // Stagger them naturally — flying is faster
   let delay = 400 + Math.random()*600;
-  picked.forEach(([name, text]) => {
-    const t = setTimeout(() => {
-      addChat(name, text, true);
-    }, delay);
-    botTimers.push(t);
+  picked.forEach(text => {
+    scheduleBotReaction(pick(BOT_NAMES), text, delay);
     delay += phase==='flying'
-      ? 600 + Math.random()*1200
+      ? 700 + Math.random()*1300
       : 1500 + Math.random()*3000;
   });
+
+  // Occasionally reference the real previous-round crash while betting
+  if (phase === 'betting' && state.history.length && Math.random() < 0.5) {
+    const prevCrash = state.history[state.history.length-1];
+    scheduleBotReaction(pick(BOT_NAMES), fillTemplate(pick(LAST_ROUND_LINES), prevCrash), delay + 300);
+  }
 }
 
 // ════════════════════════════════════════════════════
@@ -329,6 +341,7 @@ function broadcast() {
     countdown: state.countdown, houseEdge: state.houseEdge,
     history: state.history, connectedPlayers: state.connectedPlayers,
     serverHash: state.serverHash, startedAt: state.startedAt,
+    bots: liveBots,
   });
 }
 function stopAll() {
@@ -340,6 +353,9 @@ function startBetting() {
   state.phase=BETTING; state.multiplier=1.00;
   state.crashPoint=genCrash(state.houseEdge);
   state.roundNum+=1; state.countdown=5; state.startedAt=null;
+  liveBots = mkLiveBots();
+  milestonesHit = new Set();
+  cashoutChatBudget = 5;
   broadcast();
   scheduleBotChat('betting');
   let t=5;
@@ -361,6 +377,29 @@ function startFlying() {
     if(m>50){const over=m-50;m=50+over*Math.pow(1+over/80,1.6);}
     m=parseFloat(Math.min(m,state.crashPoint).toFixed(2));
     state.multiplier=m;
+
+    // Live bot cashouts — tied to the real multiplier as it happens
+    for (const bot of liveBots) {
+      if (bot.cashout || bot.lost) continue;
+      const reached = m >= bot.target;
+      const earlyChance = m > 1.3 ? 0.01 : 0;
+      if (reached || Math.random() < earlyChance) {
+        bot.cashout = parseFloat(Math.min(m, bot.target).toFixed(2));
+        if (cashoutChatBudget > 0 && Math.random() < 0.35) {
+          cashoutChatBudget--;
+          scheduleBotReaction(bot.name, fillTemplate(pick(CASHOUT_WIN_LINES), bot.cashout), 100+Math.random()*500);
+        }
+      }
+    }
+
+    // Live milestone reactions — fired exactly as the real multiplier crosses each line
+    for (const ms of MILESTONES) {
+      if (m >= ms && !milestonesHit.has(ms)) {
+        milestonesHit.add(ms);
+        scheduleBotReaction(pick(BOT_NAMES), fillTemplate(pick(MILESTONE_LINES), ms), 100+Math.random()*400);
+      }
+    }
+
     if(m>=state.crashPoint) doCrash(); else broadcast();
   },100);
 }
@@ -369,9 +408,29 @@ function doCrash() {
   const revealedSeed=state.serverSeed;
   state.phase=CRASHED; state.multiplier=state.crashPoint;
   state.history=[...state.history.slice(-29),state.crashPoint];
+
+  // Resolve remaining bot bets against the real crash point
+  const losers = [], winners = [];
+  for (const bot of liveBots) {
+    if (bot.cashout) winners.push(bot);
+    else { bot.lost = true; losers.push(bot); }
+  }
+
   io.emit('seed:reveal',{serverSeed:revealedSeed,serverHash:state.serverHash,crashPoint:state.crashPoint});
   broadcast();
   scheduleBotChat('crashed');
+
+  // A few bots react with the real crash value / their real cashout
+  let delay = 600 + Math.random()*500;
+  shuffle(losers).slice(0,4).forEach(bot => {
+    scheduleBotReaction(bot.name, fillTemplate(pick(CRASH_LOSE_LINES), state.crashPoint), delay);
+    delay += 700 + Math.random()*900;
+  });
+  shuffle(winners).slice(0,2).forEach(bot => {
+    scheduleBotReaction(bot.name, fillTemplate(pick(CRASH_WIN_LINES), bot.cashout), delay);
+    delay += 700 + Math.random()*900;
+  });
+
   setTimeout(startBetting,3200);
 }
 
@@ -385,7 +444,7 @@ io.on('connection', (socket) => {
     phase:state.phase,multiplier:state.multiplier,crashPoint:state.crashPoint,
     roundNum:state.roundNum,countdown:state.countdown,houseEdge:state.houseEdge,
     history:state.history,connectedPlayers:state.connectedPlayers,serverHash:state.serverHash,
-    startedAt:state.startedAt,
+    startedAt:state.startedAt, bots:liveBots,
   });
   // Send recent bot chat history on connect
   socket.emit('chat:history', chatLog.filter(m=>m.isBot).slice(-20));

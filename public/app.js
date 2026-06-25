@@ -67,49 +67,6 @@ function mkBet() {
 }
 const socket = io();
 
-/* ════════════ BOT CHAT SYSTEM ════════════ */
-const BOT_NAMES = ['Kamau_G', 'Wanjiku01', 'MburuWave', 'Akinyi_X', 'Otieno254', 'Njoro_Fly', 'SharonMtaa', 'BrianOG', 'GraceKali', 'JojoWapi', 'MercySheng', 'PatoVibes', 'EstherFlip', 'SamuelB', 'NaivaFlyer', 'KipsangBet', 'WinniePesa', 'DennoKsh', 'TotoWa254', 'Ciku_Real', 'BobbyMtaa', 'AmyFlip', 'SteveKe', 'LucyVibes', 'JamesPoa', 'FaithMtaa', 'PeterKe', 'AnneVibes', 'ChrisFlip', 'ZedKali', 'NandoG', 'KendiReal', 'BarakaMtaa', 'ImaniKe', 'JuaFlyer', 'FurahaG', 'Benja254', 'TraceyPoa', 'MikeMtaa', 'SylviaKe'];
-const BOT_MSGS_BETTING = ['wacha nieka 200 hii round💸', 'aki nakaa niamini hii ni yetu🙏', 'bro unapanga kueka ngapi?', 'hii game inaniua pole pole😂', 'nalala na 500 this time', 'round hii naona inafika 5x', 'aki mimi niko broke already lmao', 'tunaeza pata 10x leo?', 'Last round ilinichoma vibaya sana😭', 'naskia server ilisema 50x next👀', 'mimi betting small, trauma imeniambia', 'vibes zangu zinasema 3x hii round', 'Manze lazima nicash out early', 'watu mnaenda kwa bet gani?', 'sijui kama hii ni smart but 500 iko', 'aki nifanye budget calculation kwanza😭', 'niko ready kulipa deni yangu leo', 'hii ndiyo round ya kwanza yangu leo', 'wewe daima unasema hivyo bro😂', 'trust the process bro', 'last round nilikimbia at 1.3 naskia peke yangu', '100 tu hii round heart yangu haiwezi', 'hii round niko na feeling kubwa', 'aki naomba tu usicrash haraka🙏', 'nimeweka 300 naskia viburi', 'round ya last ilikuwa 45x manze!', 'nimesema kesho but hapa nipo tena😂', '300 in naomba tu nikatoe at 2x', 'leo lazima nirudishe ya jana', 'sijui mbona naendelea kushinda😂', 'mimi niko na gut feeling 4x', 'server leo iko na huruma naona', 'aki kila wakati ninasema sitaweka mingi then...', 'leo niko focused hakuna distraction', 'nimefanya deposit mpya niko fresh', 'round hii naona ni ya watu wazima', 'I always say small bets but then...', 'this round feels different guys', 'okay okay 500 iko final answer', 'strategy yangu ni cash out at 2x kila wakati'];
-const BOT_MSGS_FLYING = ['GO GO GO🚀', 'toa toa!!', 'cashout at 2x bro!!', 'HOLD HOLD HOLD💪', 'aki nikatoe sasa?', 'inakuja... inakuja...', 'bro cashout umelala??😭', 'TOOOA SASA!!', '2x tayari naendelea💪', 'aki niko scared😰', '3x!! toa toa toa!!', 'HOLD... hold...', 'nimeshout out tayari🔥', 'sawa nimekatoa at 2.5😅', 'bro hold bana!!', 'aki 4x already??', 'nimeshout 5x yesss', 'sijui kama nikatoe au nihold', '5x NIKATOA NIMESHINDA🎉', 'smart move!!', 'bado niko ndani... 6x...', 'aki crash itakuja sasa hivi naona', '7x?? bro uongo', 'mimi nimekatoa at 1.8 pole sana', 'TOOOA SASA BRO', 'crash inakuja nahisi mwili wangu😭', 'nimeshout 2x naenda kuomba dua', 'hold... almost... almost...', '2x nikatoa nimechoka kushinda😂', 'aki sis nimeshout at 1.5 pole', 'YESSSS 3x nimekula🔥🔥', 'hold hold hold... okay toa', 'aki inaenda juu sana manze', 'nimehold mpaka 4x aki nimechoka hold', 'toa bana crash itakuja', 'nimekatoa mapema tena😩', '5x nimeshout salamu', 'hold... hold... okay 2.5 bye', 'aki nilikuwa nahold mpaka 8x but...', 'sawa 2x ni pesa pia', '3x katoa 3x katoa!!', 'bana hold kidogo tu', 'aki nimepoteza moyo kuhold', 'niko tayari... 1.8... 2... toa!', 'aki nilikuwa nasema 5x then crash😭', 'nimeshout at 10x aki nimeenda mbinguni', 'hold sisters!! trust the plane✈️', '3.5x nikatoa naomba iende juu zaidi', 'aki nimeshout at 1.2 what was I thinking', 'KATOA SASA KATOA!!', 'guys im holding... pray for me😂'];
-const BOT_MSGS_CRASHED = ['aiiii😭😭😭', 'aki nilichelewa tena😩', 'manze crash ilinichoma', 'nilikatoa at 1.2 naskia vibaya', 'LOL nilikuwa nataka 10x💀', 'next round lazima niwe smart', 'nikakatoa at 3x🙌 nimeshinda!', 'crash game ni hivi hivi tu', 'aki naanza tena from scratch😩', 'next one ndio yetu fr fr', 'hahaha nilifanya dumb decision', 'server ni mjanja kuliko sisi sote', 'nimepoteza 300😭 aki', 'ulikimbia mapema sana!', 'round hii ilikuwa fast sana', 'nilikuwa nimesema 5x lakini...', 'GG round mbaya sana', 'nimeshinda 200 leo naskia poa', 'aki nilichomeka mbaya sana😭😭', 'next time beb pole', 'next round naenda kubig bet', 'hata mimi. round ya karibu', 'aki hii ni trauma ya kweli💀', 'always next time sis', 'nilikimbia at 1.5 naskia poooole', 'sawa sawa next round', 'nilichomeka lakini niko sawa😂', 'aki sis niliomba plane iende mbali', 'manze 1.1x crash aki hii ni unyama', 'nimeshinda kidogo naenda kulipa fare', 'aki kila mtu anaomboleza pamoja😂', 'next round naenda all in naskia bold', 'sawa nimepoteza leo kesho nitarudi', 'aki nilichomeka round tano mfululizo😭', 'nimeshinda 5x nilifurahi sana', 'pole wote waliochomeka next round', 'round hii ilikuwa ya haraka sana', 'nimeshinda kidogo enough for now', 'aki server haina huruma leo', 'nimepoteza bet yangu yote😩', 'crash came so fast aki', 'GG everyone better luck next', 'I knew I shouldve cashed out at 3x😭', 'at least I got 2x guys', 'my heart bana crash inakuwa fast', 'lesson ya leo: cashout early always'];
-let _botTimers = [];
-function _clearBotTimers() {
-  _botTimers.forEach(t => clearTimeout(t));
-  _botTimers = [];
-}
-function _dispatchBotMsg(username, text) {
-  // Push into chat via a custom event that ChatPanel listens to
-  window.dispatchEvent(new CustomEvent('bot-chat', {
-    detail: {
-      id: Date.now() + Math.random(),
-      username,
-      text,
-      isBot: true,
-      ts: Date.now()
-    }
-  }));
-}
-function scheduleBotChat(phase) {
-  _clearBotTimers();
-  const pool = phase === 'flying' ? BOT_MSGS_FLYING : phase === 'betting' ? BOT_MSGS_BETTING : BOT_MSGS_CRASHED;
-  const count = phase === 'flying' ? 4 + Math.floor(Math.random() * 6) : 3 + Math.floor(Math.random() * 4);
-  const used = new Set();
-  const picks = [];
-  while (picks.length < count && picks.length < pool.length) {
-    const i = Math.floor(Math.random() * pool.length);
-    if (!used.has(i)) {
-      used.add(i);
-      picks.push([BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)], pool[i]]);
-    }
-  }
-  let delay = 500 + Math.random() * 500;
-  picks.forEach(([name, text]) => {
-    const t = setTimeout(() => _dispatchBotMsg(name, text), delay);
-    _botTimers.push(t);
-    delay += phase === 'flying' ? 600 + Math.random() * 1000 : 1000 + Math.random() * 2000;
-  });
-}
-
 /* ════════════ SOUND ENGINE (Betika Aviator authentic) ════════════ */
 const _AC = window.AudioContext || window.webkitAudioContext;
 let _ctx = null;
@@ -1528,15 +1485,6 @@ function BetPanel({
 }
 
 /* ════════════ LIVE PANEL ════════════ */
-function mkBotWithTarget() {
-  // assign each bot a fixed target multiplier at creation — most 1.1x-3x, some higher
-  const r = Math.random();
-  const target = r < 0.55 ? 1.1 + Math.random() * 1.8 : r < 0.80 ? 3 + Math.random() * 4 : r < 0.93 ? 7 + Math.random() * 13 : 20 + Math.random() * 80;
-  return {
-    ...mkBet(),
-    target: parseFloat(target.toFixed(2))
-  };
-}
 
 /* ════════════ CHAT SIDEBAR (inline, no scroll-push) ════════════ */
 function ChatSidebar({ user, socket }) {
@@ -1547,11 +1495,8 @@ function ChatSidebar({ user, socket }) {
   React.useEffect(() => {
     socket.on('chat:history', data => setMsgs(data || []));
     socket.on('chat', msg => setMsgs(m => [...m.slice(-49), msg]));
-    const onBot = e => setMsgs(m => [...m.slice(-49), e.detail]);
-    window.addEventListener('bot-chat', onBot);
     return () => {
       socket.off('chat:history'); socket.off('chat');
-      window.removeEventListener('bot-chat', onBot);
     };
   }, []);
 
@@ -1627,13 +1572,11 @@ function LivePanel({
   gameState,
   multiplier,
   fill,
-  boxHeight
+  boxHeight,
+  bots
 }) {
   const [tab, setTab] = useState('all');
-  const betsRef = useRef(Array.from({
-    length: 24
-  }, mkBotWithTarget));
-  const [displayBets, setDisplayBets] = useState(() => betsRef.current.slice());
+  const displayBets = bots || [];
   const topBets = useRef(Array.from({
     length: 10
   }, () => ({
@@ -1642,68 +1585,6 @@ function LivePanel({
     bet: (Math.floor(Math.random() * 200) + 50) * 10,
     mult: (10 + Math.random() * 140).toFixed(2)
   })));
-  const gsRef = useRef(gameState);
-  const multRef = useRef(multiplier);
-  gsRef.current = gameState;
-  multRef.current = multiplier;
-  useEffect(() => {
-    if (gameState === BETTING) {
-      // Reset all bots for new round
-      betsRef.current = Array.from({
-        length: 24
-      }, mkBotWithTarget);
-      setDisplayBets(betsRef.current.slice());
-      return;
-    }
-    if (gameState === CRASHED) {
-      // Any bot that hasn't cashed out yet loses
-      betsRef.current = betsRef.current.map(x => x.cashout ? x : {
-        ...x,
-        lost: true
-      });
-      setDisplayBets(betsRef.current.slice());
-      return;
-    }
-  }, [gameState]);
-  useEffect(() => {
-    if (gameState !== FLYING) return;
-    // Single persistent interval — runs every 300ms throughout the flight
-    const iv = setInterval(() => {
-      const m = multRef.current;
-      let changed = false;
-      betsRef.current = betsRef.current.map(bot => {
-        if (bot.cashout || bot.lost) return bot;
-        // Cash out if multiplier has reached or passed bot's target
-        const reached = m >= bot.target;
-        // Also a small random early-cashout chance (impatient bots)
-        const earlyChance = m > 1.3 ? 0.04 : 0;
-        if (reached || Math.random() < earlyChance) {
-          changed = true;
-          const co = parseFloat((Math.min(m, bot.target) + Math.random() * 0.05).toFixed(2));
-          return {
-            ...bot,
-            cashout: co
-          };
-        }
-        return bot;
-      });
-      // Refresh a finished bot slot with a new bot occasionally
-      if (Math.random() < 0.15) {
-        const doneIdxs = betsRef.current.map((b, i) => b.cashout || b.lost ? i : -1).filter(i => i >= 0);
-        if (doneIdxs.length > 0) {
-          const ri = doneIdxs[Math.floor(Math.random() * doneIdxs.length)];
-          betsRef.current[ri] = {
-            ...mkBotWithTarget(),
-            cashout: null,
-            lost: false
-          };
-          changed = true;
-        }
-      }
-      if (changed) setDisplayBets([...betsRef.current]);
-    }, 300);
-    return () => clearInterval(iv);
-  }, [gameState]);
   return /*#__PURE__*/React.createElement("div", {
     style: fill ? {
       background: '#111827',
@@ -3492,6 +3373,7 @@ function Game({
   const [gs, setGs] = useState(BETTING);
   const [mult, setMult] = useState(1.00);
   const [history, setHistory] = useState([2.14, 1.43, 8.72, 1.07, 45.3, 3.21, 1.88, 2.66, 1.15, 12.4]);
+  const [bots, setBots] = useState([]);
   const [cd, setCd] = useState(5);
   const [startedAt, setStartedAt] = useState(null);
   const [onlineCount, setOnlineCount] = useState(247);
@@ -3533,11 +3415,9 @@ function Game({
       // Sound triggers on phase changes
       if (prev === BETTING && data.phase === FLYING) {
         if (!window.__muted) playRoundStart();
-        scheduleBotChat('flying');
       }
       if (prev === FLYING && data.phase === CRASHED) {
         if (!window.__muted) playCrash();
-        scheduleBotChat('crashed');
         if (engineTickRef.current) {
           clearInterval(engineTickRef.current);
           engineTickRef.current = null;
@@ -3548,7 +3428,6 @@ function Game({
           clearInterval(engineTickRef.current);
           engineTickRef.current = null;
         }
-        scheduleBotChat('betting');
       }
       // Engine sound while flying
       if (data.phase === FLYING && prev === FLYING) {
@@ -3570,6 +3449,7 @@ function Game({
       setGs(data.phase);
       setMult(data.multiplier);
       setHistory(data.history);
+      if (data.bots) setBots(data.bots);
       setCd(data.countdown);
       if (data.serverHash) setServerHash(data.serverHash);
       if (data.startedAt) setStartedAt(data.startedAt);
@@ -3627,7 +3507,7 @@ function Game({
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '8px 0 6px'
+      padding: '8px 0 2px'
     }
   }, /*#__PURE__*/React.createElement("div", {
     className: "nav-left",
@@ -3826,7 +3706,7 @@ function Game({
       /*#__PURE__*/React.createElement(ChatSidebar, { user:user, socket:socket })
     ),
     /*#__PURE__*/React.createElement("div", { style:{ flex:1, minWidth:0 } },
-      /*#__PURE__*/React.createElement(LivePanel, { gameState:gs, multiplier:mult, boxHeight:220 })
+      /*#__PURE__*/React.createElement(LivePanel, { gameState:gs, multiplier:mult, boxHeight:220, bots:bots })
     )
   ));
 }
@@ -3851,6 +3731,7 @@ function App() {
   const [bgGs, setBgGs] = React.useState(BETTING);
   const [bgMult, setBgMult] = React.useState(1.00);
   const [bgHistory, setBgHistory] = React.useState([2.14, 1.43, 8.72, 1.07, 45.3, 3.21, 1.88, 2.66, 1.15, 12.4]);
+  const [bgBots, setBgBots] = React.useState([]);
   const [bgCd, setBgCd] = React.useState(5);
   React.useEffect(() => {
     if (user) return;
@@ -3858,6 +3739,7 @@ function App() {
       setBgGs(data.phase);
       setBgMult(data.multiplier);
       setBgHistory(data.history);
+      if (data.bots) setBgBots(data.bots);
       setBgCd(data.countdown);
     });
     return () => socket.off('state');
@@ -4064,6 +3946,7 @@ function App() {
   }, /*#__PURE__*/React.createElement(LivePanel, {
     gameState: bgGs,
     multiplier: bgMult,
+    bots: bgBots,
     fill: true
   })));
 }
