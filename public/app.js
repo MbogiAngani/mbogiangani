@@ -244,26 +244,18 @@ function AuthWall({
       err('Enter a valid Safaricom number (07xx or 01xx).');
       return;
     }
-    const users = loadUsers();
     const fmt = formatPhone(form.phone);
-    const user = users.find(u => u.phone === fmt);
-    if (!user) {
-      err('No account found. Please register first.');
-      return;
-    }
-    if (user.password !== form.password) {
-      err('Incorrect password.');
-      return;
-    }
-    const session = {
-      ...user
-    };
-    saveSession(session);
-    setMsg({
-      text: 'Welcome back! Logging you in…',
-      ok: true
-    });
-    setTimeout(() => onLogin(session), 1000);
+    setMsg({ text: 'Logging in…', ok: true });
+    fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: fmt, password: form.password })
+    }).then(r => r.json()).then(res => {
+      if (!res.ok) { err(res.msg || 'Login failed.'); return; }
+      saveSession(res.user);
+      setMsg({ text: 'Welcome back! Logging you in…', ok: true });
+      setTimeout(() => onLogin(res.user), 800);
+    }).catch(() => err('Connection error. Try again.'));
   }
   function doRegister() {
     if (!form.phone || !form.username || !form.password || !form.confirm || !form.dob) {
@@ -296,27 +288,19 @@ function AuthWall({
       err('You must be 18 or older to register.');
       return;
     }
-    const users = loadUsers();
     const fmt = formatPhone(form.phone);
-    if (users.find(u => u.phone === fmt)) {
-      err('This phone number is already registered.');
-      return;
-    }
-    const newUser = {
-      phone: fmt,
-      username: form.username,
-      password: form.password,
-      balance: 10,
-      createdAt: Date.now()
-    };
-    users.push(newUser);
-    saveUsers(users);
-    saveSession(newUser);
-    setMsg({
-      text: 'Account created! Welcome bonus of KES 10 added 🎉',
-      ok: true
-    });
-    setTimeout(() => onLogin(newUser), 1200);
+    const refCode = new URLSearchParams(window.location.search).get('ref') || '';
+    setMsg({ text: 'Creating account…', ok: true });
+    fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: fmt, username: form.username, password: form.password, dob: form.dob, referralCode: refCode })
+    }).then(r => r.json()).then(res => {
+      if (!res.ok) { err(res.msg || 'Registration failed.'); return; }
+      saveSession(res.user);
+      setMsg({ text: 'Account created! Welcome bonus added 🎉', ok: true });
+      setTimeout(() => onLogin(res.user), 1000);
+    }).catch(() => err('Connection error. Try again.'));
   }
   const inp = {
     width: '100%',
@@ -3392,14 +3376,17 @@ function Game({
     return ()=>clearInterval(iv);
   }, []);
 
-  // Persist balance changes to localStorage
+  // Persist balance changes to server
   useEffect(() => {
-    const users = loadUsers();
-    const idx = users.findIndex(u => u.phone === user.phone);
-    if (idx >= 0) {
-      users[idx].balance = balance;
-      saveUsers(users);
-    }
+    if (!user || !user.phone) return;
+    fetch('/api/balance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: user.phone, balance })
+    }).catch(() => {});
+    // also keep session in sync locally
+    const s = loadSession();
+    if (s) { s.balance = balance; saveSession(s); }
   }, [balance]);
   const prevGsRef = useRef(null);
   const prevCdRef = useRef(null);
